@@ -7,10 +7,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
+import { getSession } from "@/lib/getSession";
 import { redirect } from "next/navigation";
 
 const Dashboard = async () => {
+  const session = await getSession();
+  const user = session?.user;
+  if (!user) return redirect("/");
 
   return (
     <div className="flex min-h-screen">
@@ -73,7 +76,7 @@ const Dashboard = async () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Your Courses & RoadMap
+                  Recent Signups
                 </CardTitle>
               </CardHeader>
               <CardContent>

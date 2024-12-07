@@ -19,7 +19,7 @@ const login = async (formData: FormData) => {
       password,
     });
   } catch (error) {
-    const someError = error as CredentialsSignin;   //if face with signin error
+    const someError = error as CredentialsSignin;
     return someError.cause;
   }
   redirect("/");
@@ -30,8 +30,6 @@ const register = async (formData: FormData) => {
   const lastName = formData.get("lastname") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-
-  console.log(firstName, lastName, email, password);
 
   if (!firstName || !lastName || !email || !password) {
     throw new Error("Please fill all fields");
@@ -46,7 +44,7 @@ const register = async (formData: FormData) => {
   const hashedPassword = await hash(password, 12);
 
   await User.create({ firstName, lastName, email, password: hashedPassword });
-//   console.log(User);
+  console.log(`User created successfully 🥂`);
   redirect("/login");
 };
 
