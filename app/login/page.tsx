@@ -19,7 +19,7 @@ const Login = async () => {
         <Label htmlFor="email">Email Address</Label>
         <Input
           id="email"
-          placeholder="projectmayhem@fc.com"
+          placeholder="demo@placeholder.com"
           type="email"
           name="email"
         />

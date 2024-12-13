@@ -13,7 +13,10 @@ const Settings = async () => {
   const allUsers = await fetchAllUsers();
 
   return (
-    <div>Settings page</div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-xl font-bold mb-4">users</h1>
+      
+    </div>
   );
 };
 
