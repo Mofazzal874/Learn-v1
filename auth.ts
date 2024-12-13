@@ -86,33 +86,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
 
-    async signIn({ user, account, profile }) {
-      try {
-        if (!user.email) {
-          return false;
-        }
-
-        await connectDB();
-
-        if (account?.provider === "github" || account?.provider === "google"|| account?.provider === "credentials") {
-          const existingUser = await User.findOne({ email: user.email });
-
-          if (!existingUser) {
-            await User.create({
-              email: user.email,
-              firstName: user.name?.split(' ')[0] || 'Unknown',
-              lastName: user.name?.split(' ')[1] || 'User',
-              image: user.image,
-              authProviderId: user.id
-            });
+    signIn: async ({ user, account }) => {
+      if (account?.provider === "google") {
+        try {
+          const { email, name, image, id } = user;
+          await connectDB();
+          const alreadyUser = await User.findOne({ email });
+    
+          if (!alreadyUser) {
+            await User.create({ email, name, image, authProviderId: id });
           }
+          return true;
+        } catch (error) {
+          throw new Error("Error while creating user");
         }
-
-        return true;
-      } catch (error) {
-        console.error("SignIn error:", error);
-        return false;
       }
-    },
+    
+      if (account?.provider === "github") {
+        try {
+          const { email, name, image, id } = user;
+          await connectDB();
+          const alreadyUser = await User.findOne({ email });
+    
+          if (!alreadyUser) {
+            await User.create({ email, name, image, authProviderId: id });
+          }
+          return true;
+        } catch (error) {
+          throw new Error("Error while creating user");
+        }
+      }
+    
+      if (account?.provider === "credentials") {
+        return true;
+      }
+    
+      return false;
+    }
   },
 });
