@@ -100,7 +100,7 @@ installation
 npx --legacy-peer-deps shadcn@latest init
 
 
-npx --legacy-peer-deps shadcn@latest add button card input table dropdown-menu label
+npx --legacy-peer-deps shadcn@latest add button card input table dropdown-menu label textarea 
 
 
 # icons

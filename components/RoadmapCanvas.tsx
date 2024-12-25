@@ -14,10 +14,14 @@ import ReactFlow, {
   OnConnect,
   Node,
   Edge,
+  Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { RoadmapNode, RoadmapEdge } from "../types";
 import NodeDetailsPanel from "./NodeDetailsPanel";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
 
 interface RoadmapCanvasProps {
   nodes: RoadmapNode[];
@@ -87,13 +91,22 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   onUpdateNodes,
   onUpdateEdges,
 }) => {
-  // Initialize React Flow nodes and edges
   const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes);
   const initialRfEdges = mapRoadmapEdgesToReactFlowEdges(edges);
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(initialRfNodes);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(initialRfEdges);
   const [selectedNode, setSelectedNode] = useState<RoadmapNode | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Handle connection (edge creation)
   const onConnectHandler: OnConnect = useCallback(
@@ -157,9 +170,45 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     setSelectedNode(updatedNode);
   };
 
+  const NodeDetailsPanelWrapper = () => (
+    selectedNode && (
+      isMobile ? (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed bottom-20 right-4 z-50"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[80vh]">
+            <SheetHeader>
+              <SheetTitle>Node Details</SheetTitle>
+            </SheetHeader>
+            <NodeDetailsPanel
+              node={selectedNode}
+              onClose={() => setSelectedNode(null)}
+              onUpdate={handleNodeUpdate}
+            />
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <div className="hidden md:block">
+          <NodeDetailsPanel
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+            onUpdate={handleNodeUpdate}
+          />
+        </div>
+      )
+    )
+  );
+
   return (
-    <div className="flex h-screen">
-      <div className="flex-1">
+    <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex-1 relative">
         <ReactFlow
           nodes={rfNodes}
           edges={rfEdges}
@@ -171,18 +220,18 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           fitView
           attributionPosition="bottom-left"
         >
-          <MiniMap />
-          <Controls />
+          <Controls className="bottom-4 right-4" />
+          <MiniMap className="bottom-4 right-16" />
           <Background />
+          <Panel position="top-left" className="bg-white dark:bg-gray-800 p-2 rounded shadow-lg">
+            <div className="text-sm">
+              <p>Nodes: {rfNodes.length}</p>
+              <p>Completed: {rfNodes.filter(n => n.data.completed).length}</p>
+            </div>
+          </Panel>
         </ReactFlow>
       </div>
-      {selectedNode && (
-        <NodeDetailsPanel
-          node={selectedNode}
-          onClose={() => setSelectedNode(null)}
-          onUpdate={handleNodeUpdate}
-        />
-      )}
+      <NodeDetailsPanelWrapper />
     </div>
   );
 };

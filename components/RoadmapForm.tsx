@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Settings } from "lucide-react";
 
 interface RoadmapFormProps {
   onGenerate: (data: RoadmapFormData) => void;
@@ -35,8 +37,8 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
     onGenerate(formData);
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-white dark:bg-black rounded-md shadow">
+  const FormContent = () => (
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="prompt">What do you want to learn?</Label>
         <Input
@@ -56,7 +58,7 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
           name="level"
           value={formData.level}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
         >
           <option value="beginner">Beginner</option>
           <option value="intermediate">Intermediate</option>
@@ -71,7 +73,7 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
           name="roadmapType"
           value={formData.roadmapType}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
         >
           <option value="week-by-week">Week by Week</option>
           <option value="topic-wise">Topic-wise</option>
@@ -85,7 +87,7 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
           name="treeDirection"
           value={formData.treeDirection}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
         >
           <option value="top-down">Top-Down</option>
           <option value="bottom-up">Bottom-Up</option>
@@ -96,6 +98,34 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
         Generate Roadmap
       </Button>
     </form>
+  );
+
+  return (
+    <>
+      {/* Mobile View */}
+      <div className="md:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="fixed bottom-4 right-4 z-50">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[80vh]">
+            <SheetHeader>
+              <SheetTitle>Roadmap Settings</SheetTitle>
+            </SheetHeader>
+            <div className="p-4">
+              <FormContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden md:block p-4">
+        <FormContent />
+      </div>
+    </>
   );
 };
 

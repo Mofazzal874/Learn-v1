@@ -1,5 +1,6 @@
 // lib/ai.ts
 import axios from "axios";
+import { RoadmapNode } from "@/types";
 
 interface AIRequest {
   prompt: string;
@@ -13,45 +14,67 @@ export const generateRoadmap = async (
   roadmapType: "week-by-week" | "topic-wise"
 ) => {
   const aiPrompt = `
-  Create a ${roadmapType} roadmap for learning ${prompt} at a ${level} level. 
-  Output the roadmap as a JSON array of nodes, where each node has an id, title, and children (array of child node ids). Ensure that the roadmap is detailed and covers all essential topics.
+  Create a detailed ${roadmapType} learning roadmap for ${prompt} at a ${level} level.
+  Format the response as a JSON array of nodes where each node has:
+  - id (string)
+  - title (string)
+  - description (array of strings, bullet points about the topic)
+  - children (array of node IDs)
+  - timeNeeded (estimated hours to complete)
+  
+  Ensure the roadmap:
+  - Is properly structured with clear progression
+  - Has detailed descriptions for each topic
+  - Includes practical exercises and projects
+  - Has logical dependencies between topics
   `;
 
-  const response = await axios.post(
-    "https://api.openai.com/v1/completions",
-    {
-      model: "text-davinci-003",
-      prompt: aiPrompt,
-      max_tokens: 1500,
-      temperature: 0.7,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-    }
-  );
-
-  const text = response.data.choices[0].text.trim();
-
-  // Assuming the AI returns JSON, parse it
-  let roadmap;
   try {
-    roadmap = JSON.parse(text);
+    const response = await axios.post(
+      "https://api.groq.com/v1/completions",
+      {
+        model: "mixtral-8x7b-32768",
+        prompt: aiPrompt,
+        max_tokens: 4000,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+      }
+    );
+
+    const text = response.data.choices[0].text.trim();
+    let roadmap = JSON.parse(text);
+
+    // Process nodes to add required fields and positions
+    const processedNodes: RoadmapNode[] = roadmap.map((node: any, index: number) => ({
+      ...node,
+      completed: false,
+      position: calculateNodePosition(index, roadmap.length),
+      timeConsumed: 0,
+    }));
+
+    return processedNodes;
   } catch (error) {
-    throw new Error("Failed to parse AI response");
+    console.error("Error generating roadmap:", error);
+    throw new Error("Failed to generate roadmap");
   }
-
-  // Validate and process the roadmap
-  // Assign positions for React Flow visualization (can be random or algorithmic)
-  const processedRoadmap = roadmap.map((node: any, index: number) => ({
-    ...node,
-    position: {
-      x: Math.random() * 500,
-      y: Math.random() * 500,
-    },
-  }));
-
-  return processedRoadmap;
 };
+
+// Helper function to calculate node positions in a tree layout
+function calculateNodePosition(index: number, total: number) {
+  const VERTICAL_SPACING = 100;
+  const HORIZONTAL_SPACING = 200;
+  const nodesPerRow = Math.ceil(Math.sqrt(total));
+  
+  const row = Math.floor(index / nodesPerRow);
+  const col = index % nodesPerRow;
+  
+  return {
+    x: col * HORIZONTAL_SPACING,
+    y: row * VERTICAL_SPACING
+  };
+}
