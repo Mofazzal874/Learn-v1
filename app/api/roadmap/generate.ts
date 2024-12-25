@@ -1,10 +1,10 @@
 //Generate Roadmap via AI
-// pages/api/roadmap/generate.ts
+// app/api/roadmap/generate.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import connectDB from "@/lib/db";
 import { Roadmap } from "@/models/Roadmap";
 import { getSession } from "@/lib/getSession";
-import { generateRoadmap } from "@/lib/ai"; // To be implemented
+import { generateRoadmap } from "@/lib/ai"; 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });

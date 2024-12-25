@@ -8,23 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Settings } from "lucide-react";
 
-interface RoadmapFormProps {
-  onGenerate: (data: RoadmapFormData) => void;
-}
-
-export interface RoadmapFormData {
+interface RoadmapFormData {
   prompt: string;
   level: "beginner" | "intermediate" | "advanced";
   roadmapType: "week-by-week" | "topic-wise";
-  treeDirection: "top-down" | "bottom-up";
 }
 
-const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
+const RoadmapForm: React.FC<{ onGenerate: (data: RoadmapFormData) => void }> = ({ onGenerate }) => {
   const [formData, setFormData] = useState<RoadmapFormData>({
     prompt: "",
     level: "beginner",
-    roadmapType: "topic-wise",
-    treeDirection: "top-down",
+    roadmapType: "topic-wise"
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -34,6 +28,7 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting form data:", formData);
     onGenerate(formData);
   };
 
@@ -77,20 +72,6 @@ const RoadmapForm: React.FC<RoadmapFormProps> = ({ onGenerate }) => {
         >
           <option value="week-by-week">Week by Week</option>
           <option value="topic-wise">Topic-wise</option>
-        </select>
-      </div>
-
-      <div>
-        <Label htmlFor="treeDirection">Tree Direction</Label>
-        <select
-          id="treeDirection"
-          name="treeDirection"
-          value={formData.treeDirection}
-          onChange={handleChange}
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-        >
-          <option value="top-down">Top-Down</option>
-          <option value="bottom-up">Bottom-Up</option>
         </select>
       </div>
 

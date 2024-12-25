@@ -20,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "groq-sdk": "^0.9.1",
     "lucide-react": "^0.468.0",
     "mongoose": "^8.8.4",
     "next": "15.0.4",
@@ -28,6 +29,7 @@
     "react-dom": "^19.0.0",
     "reactflow": "^11.11.4",
     "shadcn-ui": "^0.9.4",
+    "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7"
   },
