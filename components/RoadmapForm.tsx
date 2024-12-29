@@ -14,6 +14,70 @@ interface RoadmapFormData {
   roadmapType: "week-by-week" | "topic-wise";
 }
 
+// Move FormContent outside of the main component
+const FormContent = ({ 
+  formData, 
+  handleChange, 
+  handleSubmit 
+}: { 
+  formData: RoadmapFormData;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleSubmit: (e: React.FormEvent) => void;
+}) => (
+  <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-2">
+      <Label htmlFor="prompt">What do you want to learn?</Label>
+      <Input
+        id="prompt"
+        name="prompt"
+        value={formData.prompt}
+        onChange={handleChange}
+        placeholder="e.g., Machine Learning"
+        className="w-full"
+        autoComplete="off"
+        required
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="level">Your Level</Label>
+      <select
+        id="level"
+        name="level"
+        value={formData.level}
+        onChange={handleChange}
+        className="w-full p-2 border rounded bg-background text-foreground 
+          dark:bg-gray-800 dark:text-white dark:border-gray-700
+          focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+        <option value="beginner" className="bg-background dark:bg-gray-800">Beginner</option>
+        <option value="intermediate" className="bg-background dark:bg-gray-800">Intermediate</option>
+        <option value="advanced" className="bg-background dark:bg-gray-800">Advanced</option>
+      </select>
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="roadmapType">Roadmap Type</Label>
+      <select
+        id="roadmapType"
+        name="roadmapType"
+        value={formData.roadmapType}
+        onChange={handleChange}
+        className="w-full p-2 border rounded bg-background text-foreground 
+          dark:bg-gray-800 dark:text-white dark:border-gray-700
+          focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+        <option value="week-by-week" className="bg-background dark:bg-gray-800">Week by Week</option>
+        <option value="topic-wise" className="bg-background dark:bg-gray-800">Topic-wise</option>
+      </select>
+    </div>
+
+    <Button type="submit" className="w-full">
+      Generate Roadmap
+    </Button>
+  </form>
+);
+
 const RoadmapForm: React.FC<{ onGenerate: (data: RoadmapFormData) => void }> = ({ onGenerate }) => {
   const [formData, setFormData] = useState<RoadmapFormData>({
     prompt: "",
@@ -21,65 +85,20 @@ const RoadmapForm: React.FC<{ onGenerate: (data: RoadmapFormData) => void }> = (
     roadmapType: "topic-wise"
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting form data:", formData);
     onGenerate(formData);
   };
-
-  const FormContent = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="prompt">What do you want to learn?</Label>
-        <Input
-          id="prompt"
-          name="prompt"
-          value={formData.prompt}
-          onChange={handleChange}
-          placeholder="e.g., Machine Learning"
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="level">Your Level</Label>
-        <select
-          id="level"
-          name="level"
-          value={formData.level}
-          onChange={handleChange}
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-        >
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-
-      <div>
-        <Label htmlFor="roadmapType">Roadmap Type</Label>
-        <select
-          id="roadmapType"
-          name="roadmapType"
-          value={formData.roadmapType}
-          onChange={handleChange}
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-        >
-          <option value="week-by-week">Week by Week</option>
-          <option value="topic-wise">Topic-wise</option>
-        </select>
-      </div>
-
-      <Button type="submit" className="w-full">
-        Generate Roadmap
-      </Button>
-    </form>
-  );
 
   return (
     <>
@@ -96,7 +115,11 @@ const RoadmapForm: React.FC<{ onGenerate: (data: RoadmapFormData) => void }> = (
               <SheetTitle>Roadmap Settings</SheetTitle>
             </SheetHeader>
             <div className="p-4">
-              <FormContent />
+              <FormContent 
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+              />
             </div>
           </SheetContent>
         </Sheet>
@@ -104,7 +127,11 @@ const RoadmapForm: React.FC<{ onGenerate: (data: RoadmapFormData) => void }> = (
 
       {/* Desktop View */}
       <div className="hidden md:block p-4">
-        <FormContent />
+        <FormContent 
+          formData={formData}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+        />
       </div>
     </>
   );

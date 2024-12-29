@@ -2,19 +2,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { RoadmapNode } from "../types";
+import { RoadmapNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { format } from "date-fns";
+import { Info } from "lucide-react";
 
 interface NodeDetailsPanelProps {
   node: RoadmapNode;
   onClose: () => void;
   onUpdate: (node: RoadmapNode) => void;
+  isMobile?: boolean;
 }
 
-const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
+const NodeContent: React.FC<NodeDetailsPanelProps> = ({
   node,
   onClose,
   onUpdate,
@@ -29,55 +33,29 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const { name, value } = e.target;
     setEditableNode((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
-  const handleDescriptionChange = (index: number, value: string) => {
-    setEditableNode((prev) => ({
-      ...prev,
-      description: prev.description?.map((desc, i) => 
-        i === index ? value : desc
-      ) || [],
-    }));
-  };
-
-  const addDescriptionPoint = () => {
-    setEditableNode((prev) => ({
-      ...prev,
-      description: [...(prev.description || []), ""],
-    }));
-  };
-
-  const removeDescriptionPoint = (index: number) => {
-    setEditableNode((prev) => ({
-      ...prev,
-      description: prev.description?.filter((_, i) => i !== index) || [],
-    }));
-  };
-
-  const handleSave = async () => {
+  const handleSave = () => {
     onUpdate(editableNode);
     setIsEditing(false);
   };
 
   const calculateProgress = () => {
-    if (!editableNode.timeNeeded || !editableNode.timeConsumed) return 0;
-    return Math.min((editableNode.timeConsumed / editableNode.timeNeeded) * 100, 100);
+    if (!editableNode.timeNeeded) return 0;
+    return Math.min(
+      100,
+      Math.round((editableNode.timeConsumed || 0) / editableNode.timeNeeded * 100)
+    );
   };
 
   return (
-    <ScrollArea className="w-96 h-screen bg-white dark:bg-gray-800 p-6 border-l">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">{isEditing ? "Edit Node" : "Node Details"}</h2>
-          <Button variant="ghost" onClick={onClose}>×</Button>
-        </div>
-
+    <ScrollArea className="h-full">
+      <div className="p-4 space-y-4">
         {isEditing ? (
           <div className="space-y-4">
             <div>
@@ -86,34 +64,25 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                 name="title"
                 value={editableNode.title}
                 onChange={handleChange}
+                className="w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Description Points</label>
-              {editableNode.description?.map((desc, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <Input
-                    value={desc}
-                    onChange={(e) => handleDescriptionChange(index, e.target.value)}
-                  />
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeDescriptionPoint(index)}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addDescriptionPoint}
-                className="mt-2"
-              >
-                Add Point
-              </Button>
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <Textarea
+                name="description"
+                value={Array.isArray(editableNode.description) 
+                  ? editableNode.description.join('\n') 
+                  : editableNode.description || ''}
+                onChange={(e) => {
+                  setEditableNode(prev => ({
+                    ...prev,
+                    description: e.target.value.split('\n')
+                  }));
+                }}
+                className="w-full min-h-[100px]"
+              />
             </div>
 
             <div>
@@ -121,8 +90,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               <Input
                 type="number"
                 name="timeNeeded"
-                value={editableNode.timeNeeded || ""}
+                value={editableNode.timeNeeded || 0}
                 onChange={handleChange}
+                className="w-full"
               />
             </div>
 
@@ -131,14 +101,17 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               <Input
                 type="number"
                 name="timeConsumed"
-                value={editableNode.timeConsumed || ""}
+                value={editableNode.timeConsumed || 0}
                 onChange={handleChange}
+                className="w-full"
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={handleSave} className="flex-1">Save</Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
+            <div className="flex space-x-2">
+              <Button onClick={handleSave} className="flex-1">
+                Save
+              </Button>
+              <Button onClick={() => setIsEditing(false)} variant="outline" className="flex-1">
                 Cancel
               </Button>
             </div>
@@ -146,24 +119,25 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         ) : (
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium">Title</h3>
-              <p>{editableNode.title}</p>
+              <h2 className="text-xl font-semibold mb-2">{editableNode.title}</h2>
+              <div className="space-y-2">
+                <h3 className="font-medium">Description</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  {Array.isArray(editableNode.description) 
+                    ? editableNode.description.map((desc, index) => (
+                        <li key={index} className="text-sm">{desc}</li>
+                      ))
+                    : <li className="text-sm">{editableNode.description}</li>
+                  }
+                </ul>
+              </div>
             </div>
 
             <div>
-              <h3 className="font-medium">Description</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {editableNode.description?.map((desc, index) => (
-                  <li key={index}>{desc}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-medium">Progress</h3>
+              <h3 className="font-medium mb-2">Progress</h3>
               <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full"
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                   style={{ width: `${calculateProgress()}%` }}
                 ></div>
               </div>
@@ -172,6 +146,15 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               </p>
             </div>
 
+            {editableNode.deadline && (
+              <div>
+                <h3 className="font-medium">Deadline</h3>
+                <p className="text-sm">
+                  {format(new Date(editableNode.deadline), 'PPP')}
+                </p>
+              </div>
+            )}
+
             <Button onClick={() => setIsEditing(true)} className="w-full">
               Edit Node
             </Button>
@@ -179,6 +162,35 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         )}
       </div>
     </ScrollArea>
+  );
+};
+
+const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = (props) => {
+  const { isMobile, node } = props;
+
+  if (isMobile) {
+    return (
+      <div className="md:hidden">
+        <Sheet open={!!node} onOpenChange={() => props.onClose()}>
+          <SheetContent side="bottom" className="h-[80vh] w-full">
+            <SheetHeader>
+              <SheetTitle>Node Details</SheetTitle>
+            </SheetHeader>
+            <div className="h-[calc(80vh-4rem)]">
+              <NodeContent {...props} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hidden md:block w-80 h-full border-l border-gray-200 dark:border-gray-800">
+      <div className="h-full">
+        <NodeContent {...props} />
+      </div>
+    </div>
   );
 };
 

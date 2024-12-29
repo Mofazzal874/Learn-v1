@@ -22,6 +22,7 @@ import NodeDetailsPanel from "./NodeDetailsPanel";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface RoadmapCanvasProps {
   nodes: RoadmapNode[];
@@ -97,16 +98,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(initialRfNodes);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(initialRfEdges);
   const [selectedNode, setSelectedNode] = useState<RoadmapNode | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Handle connection (edge creation)
   const onConnectHandler: OnConnect = useCallback(
@@ -170,42 +162,6 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     setSelectedNode(updatedNode);
   };
 
-  const NodeDetailsPanelWrapper = () => (
-    selectedNode && (
-      isMobile ? (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="fixed bottom-20 right-4 z-50"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[80vh]">
-            <SheetHeader>
-              <SheetTitle>Node Details</SheetTitle>
-            </SheetHeader>
-            <NodeDetailsPanel
-              node={selectedNode}
-              onClose={() => setSelectedNode(null)}
-              onUpdate={handleNodeUpdate}
-            />
-          </SheetContent>
-        </Sheet>
-      ) : (
-        <div className="hidden md:block">
-          <NodeDetailsPanel
-            node={selectedNode}
-            onClose={() => setSelectedNode(null)}
-            onUpdate={handleNodeUpdate}
-          />
-        </div>
-      )
-    )
-  );
-
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       <div className="flex-1 relative">
@@ -231,7 +187,14 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           </Panel>
         </ReactFlow>
       </div>
-      <NodeDetailsPanelWrapper />
+      {selectedNode && (
+        <NodeDetailsPanel
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          onUpdate={handleNodeUpdate}
+          isMobile={isMobile}
+        />
+      )}
     </div>
   );
 };

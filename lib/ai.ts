@@ -45,7 +45,7 @@ export const generateRoadmap = async (
             content: aiPrompt
           }
         ],
-        temperature: 0.7,
+        temperature: 0.8,
         max_tokens: 4000
       },
       {
