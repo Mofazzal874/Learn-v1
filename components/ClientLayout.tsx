@@ -18,7 +18,6 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
 
   useEffect(() => {
     const handleClickOutside = (event: { target: any; }) => {
-      // Check if click is outside both sidebar and toggle button
       if (
         sidebarRef.current && 
         !sidebarRef.current.contains(event.target) &&
@@ -29,7 +28,6 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
       }
     };
 
-    // Only add listener if sidebar is open
     if (isDesktopSidebarOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -41,7 +39,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] text-white">
-      {/* Top Navigation Bar - Always visible */}
+      {/* Top Navigation Bar */}
       <div className="fixed top-0 left-0 right-0 h-16 z-40">
         {/* Mobile Menu Button */}
         <div className="md:hidden absolute left-4 top-1/2 transform -translate-y-1/2 z-50">
@@ -60,7 +58,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
           </Sheet>
         </div>
 
-        {/* Desktop Menu Toggle Button - Moved to the sidebar */}
+        {/* Desktop Menu Toggle Button */}
         <div className="hidden md:block fixed top-3 left-3 z-50" ref={toggleButtonRef}>
           <Button 
             variant="ghost" 
@@ -72,13 +70,13 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
           </Button>
         </div>
 
-        {/* Navbar with adjusted padding for desktop */}
+        {/* Navbar */}
         <div className="md:pl-16">
           {navbar}
         </div>
       </div>
 
-      {/* Desktop Sidebar - Fixed position with transition */}
+      {/* Desktop Sidebar */}
       <div 
         ref={sidebarRef}
         className={`hidden md:block fixed top-16 left-0 h-[calc(100vh-4rem)] bg-[#141414] 
@@ -88,14 +86,12 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, navbar }) 
         <Sidebar />
       </div>
 
-      {/* Main Content - Adjusted padding with transition */}
+      {/* Content Area */}
       <div 
-        className={`pt-16 transition-all duration-300 ease-in-out
+        className={`pt-16 transition-all duration-300 ease-in-out h-[calc(100vh-4rem)]
           ${isDesktopSidebarOpen ? 'md:pl-64' : 'md:pl-0'}`}
       >
-        <main className="p-4 min-h-[calc(100vh-4rem)]">
-          {children}
-        </main>
+        {children}
       </div>
     </div>
   );

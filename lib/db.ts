@@ -11,3 +11,17 @@ const connectDB = async () => {
 };
 
 export default connectDB;
+
+// For singleton pattern
+const globalForMongoose = global as unknown as {
+  mongoose: {
+    conn: null | typeof mongoose;
+    promise: null | Promise<typeof mongoose>;
+  };
+};
+
+if (!globalForMongoose.mongoose) {
+  globalForMongoose.mongoose = { conn: null, promise: null };
+}
+
+export { mongoose };

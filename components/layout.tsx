@@ -12,9 +12,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = async ({ children }) => 
     return (
       <div className="min-h-screen">
         <Navbar />
-        <main className="p-4 sm:p-6">
+        <div className="h-full">
           {children}
-        </main>
+        </div>
       </div>
     );
   }
