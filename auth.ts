@@ -97,7 +97,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
-            await User.create({ email, name, image, authProviderId: id });
+            const [firstName = "", lastName = ""] = (name || "").split(" ");
+            await User.create({ 
+              email, 
+              firstName, 
+              lastName,
+              name, 
+              image, 
+              authProviderId: id,
+              role: "user"
+            });
           }
           return true;
         } catch (error) {
@@ -112,7 +121,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
-            await User.create({ email, name, image, authProviderId: id });
+            const [firstName = "", lastName = ""] = (name || "").split(" ");
+            await User.create({ 
+              email, 
+              firstName, 
+              lastName,
+              name, 
+              image, 
+              authProviderId: id,
+              role: "user"
+            });
           }
           return true;
         } catch (error) {

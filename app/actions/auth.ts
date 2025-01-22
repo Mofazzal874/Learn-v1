@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import connectDB from "@/lib/db";
 import { User } from "@/models/User";
 import { hash } from "bcryptjs";
@@ -56,5 +56,9 @@ const fetchAllUsers = async () => {
   const users = await User.find({});
   return users;
 };
+
+export async function handleSignOut() {
+  await signOut({ redirectTo: "/login" });
+}
 
 export { register, login, fetchAllUsers }; 
