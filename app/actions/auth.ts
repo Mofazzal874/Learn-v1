@@ -25,7 +25,7 @@ const login = async (formData: FormData): Promise<{ error: string } | void> => {
   } catch (error) {
     return { error: "Invalid credentials" };
   }
-  redirect("/");
+  redirect("/private/dashboard");
 };
 
 const register = async (formData: FormData) => {
