@@ -9,6 +9,10 @@ import {
 } from "@/components/ui/table";
 import { getSession } from "@/lib/getSession";
 import { redirect } from "next/navigation";
+import { BookOpen, Brain, LogOut, Target, Trophy, User } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { signOut } from "@/auth";
 
 const Dashboard = async () => {
   const session = await getSession();
@@ -17,14 +21,169 @@ const Dashboard = async () => {
 
   return (
     <div className="flex min-h-screen">
-      <div className="flex-1 bg-gray-100 dark:bg-gray-950">
-        <div className="p-6 grid gap-6">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+      <div className="flex-1 bg-[#0a0a0a]">
+        {/* Profile and Sign Out Buttons */}
+        <div className="absolute top-4 right-8 flex items-center gap-3">
+          <Link
+            href="/private/profile"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#141414] text-gray-300 hover:text-white hover:bg-gray-800 transition-all"
+          >
+            <User className="h-4 w-4" />
+            <span>{user.firstName}</span>
+          </Link>
+          <form
+            action={async () => {
+              "use server";
+              await signOut();
+            }}
+          >
+            <Button 
+              type="submit"
+              variant="ghost" 
+              className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </form>
+        </div>
+
+        <div className="p-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white">
+              Welcome back, {user.firstName}! 👋
+            </h1>
+            <p className="text-gray-400 mt-2">
+              Here's an overview of your learning progress
+            </p>
           </div>
 
-          <div className="grid gap-6">
-            
+          {/* Stats Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-0 shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">
+                  Courses in Progress
+                </CardTitle>
+                <BookOpen className="h-4 w-4 text-blue-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">4</div>
+                <p className="text-xs text-gray-400 mt-1">+2 from last month</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-0 shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">
+                  Skills Mastered
+                </CardTitle>
+                <Brain className="h-4 w-4 text-purple-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">12</div>
+                <p className="text-xs text-gray-400 mt-1">+3 this week</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-pink-500/10 to-red-500/10 border-0 shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">
+                  Goals Completed
+                </CardTitle>
+                <Target className="h-4 w-4 text-pink-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">8</div>
+                <p className="text-xs text-gray-400 mt-1">80% success rate</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-red-500/10 to-orange-500/10 border-0 shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">
+                  Achievements
+                </CardTitle>
+                <Trophy className="h-4 w-4 text-red-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">15</div>
+                <p className="text-xs text-gray-400 mt-1">3 new unlocked</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activity & Progress Section */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Recent Activity */}
+            <Card className="bg-[#141414] border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg text-white">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-800">
+                      <TableHead className="text-gray-400">Activity</TableHead>
+                      <TableHead className="text-right text-gray-400">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="border-gray-800">
+                      <TableCell className="text-white">Completed Python Basics</TableCell>
+                      <TableCell className="text-right text-gray-400">Today</TableCell>
+                    </TableRow>
+                    <TableRow className="border-gray-800">
+                      <TableCell className="text-white">Started Web Development</TableCell>
+                      <TableCell className="text-right text-gray-400">Yesterday</TableCell>
+                    </TableRow>
+                    <TableRow className="border-gray-800">
+                      <TableCell className="text-white">Earned JavaScript Badge</TableCell>
+                      <TableCell className="text-right text-gray-400">2 days ago</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Learning Progress */}
+            <Card className="bg-[#141414] border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg text-white">Current Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-400">Python Mastery</span>
+                      <span className="text-sm text-blue-400">75%</span>
+                    </div>
+                    <div className="h-2 bg-gray-800 rounded-full">
+                      <div className="h-2 bg-blue-500 rounded-full" style={{ width: '75%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-400">Web Development</span>
+                      <span className="text-sm text-purple-400">45%</span>
+                    </div>
+                    <div className="h-2 bg-gray-800 rounded-full">
+                      <div className="h-2 bg-purple-500 rounded-full" style={{ width: '45%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-400">Data Science</span>
+                      <span className="text-sm text-pink-400">30%</span>
+                    </div>
+                    <div className="h-2 bg-gray-800 rounded-full">
+                      <div className="h-2 bg-pink-500 rounded-full" style={{ width: '30%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

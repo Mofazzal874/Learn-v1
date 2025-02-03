@@ -15,17 +15,11 @@ export default function LoginPage() {
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
-
-    try {
-      const result = await login(formData);
-      
-      if (result?.error) {
-        setError(result.error);
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+    
+    const result = await login(formData);
+    
+    if (result?.error) {
+      setError(result.error);
       setIsLoading(false);
     }
   }
