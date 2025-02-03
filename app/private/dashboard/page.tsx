@@ -61,55 +61,67 @@ const Dashboard = async () => {
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-0 shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400">
+            <Card className="relative bg-[#141414] border border-blue-500/20 shadow-xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-transparent"></div>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+                <CardTitle className="text-sm font-medium text-white">
                   Courses in Progress
                 </CardTitle>
-                <BookOpen className="h-4 w-4 text-blue-400" />
+                <div className="p-2 bg-blue-500/10 rounded-full">
+                  <BookOpen className="h-4 w-4 text-blue-400" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="text-2xl font-bold text-white">4</div>
-                <p className="text-xs text-gray-400 mt-1">+2 from last month</p>
+                <p className="text-sm text-blue-200 mt-1">+2 from last month</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-0 shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400">
+            <Card className="relative bg-[#141414] border border-purple-500/20 shadow-xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-transparent"></div>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+                <CardTitle className="text-sm font-medium text-white">
                   Skills Mastered
                 </CardTitle>
-                <Brain className="h-4 w-4 text-purple-400" />
+                <div className="p-2 bg-purple-500/10 rounded-full">
+                  <Brain className="h-4 w-4 text-purple-400" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="text-2xl font-bold text-white">12</div>
-                <p className="text-xs text-gray-400 mt-1">+3 this week</p>
+                <p className="text-sm text-purple-200 mt-1">+3 this week</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-pink-500/10 to-red-500/10 border-0 shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400">
+            <Card className="relative bg-[#141414] border border-pink-500/20 shadow-xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-red-500/10 to-transparent"></div>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+                <CardTitle className="text-sm font-medium text-white">
                   Goals Completed
                 </CardTitle>
-                <Target className="h-4 w-4 text-pink-400" />
+                <div className="p-2 bg-pink-500/10 rounded-full">
+                  <Target className="h-4 w-4 text-pink-400" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="text-2xl font-bold text-white">8</div>
-                <p className="text-xs text-gray-400 mt-1">80% success rate</p>
+                <p className="text-sm text-pink-200 mt-1">80% success rate</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-red-500/10 to-orange-500/10 border-0 shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400">
+            <Card className="relative bg-[#141414] border border-red-500/20 shadow-xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-orange-500/10 to-transparent"></div>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+                <CardTitle className="text-sm font-medium text-white">
                   Achievements
                 </CardTitle>
-                <Trophy className="h-4 w-4 text-red-400" />
+                <div className="p-2 bg-red-500/10 rounded-full">
+                  <Trophy className="h-4 w-4 text-red-400" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="text-2xl font-bold text-white">15</div>
-                <p className="text-xs text-gray-400 mt-1">3 new unlocked</p>
+                <p className="text-sm text-red-200 mt-1">3 new unlocked</p>
               </CardContent>
             </Card>
           </div>
