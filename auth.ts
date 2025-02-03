@@ -27,8 +27,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
 
       authorize: async (credentials) => {
-        const email = credentials.email as string | undefined;
-        const password = credentials.password as string | undefined;
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
 
         if (!email || !password) {
           throw new CredentialsSignin("Please provide both email & password");
@@ -67,21 +67,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   pages: {
     signIn: "/login",
-    error:"auth/error",
+    error: "auth/error",
   },
 
   callbacks: {
     async session({ session, token }) {
       if (token?.sub && token?.role) {
-        session.user.id = token.sub;
-        session.user.role = token.role;
+        session.user = {
+          ...session.user,
+          id: token.sub,
+          role: token.role as string
+        };
       }
       return session;
     },
 
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        token.role = user.role as string;
       }
       return token;
     },
@@ -94,7 +97,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
-            await User.create({ email, name, image, authProviderId: id });
+            const [firstName = "", lastName = ""] = (name || "").split(" ");
+            await User.create({ 
+              email, 
+              firstName, 
+              lastName,
+              name, 
+              image, 
+              authProviderId: id,
+              role: "user"
+            });
           }
           return true;
         } catch (error) {
@@ -109,7 +121,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
-            await User.create({ email, name, image, authProviderId: id });
+            const [firstName = "", lastName = ""] = (name || "").split(" ");
+            await User.create({ 
+              email, 
+              firstName, 
+              lastName,
+              name, 
+              image, 
+              authProviderId: id,
+              role: "user"
+            });
           }
           return true;
         } catch (error) {
