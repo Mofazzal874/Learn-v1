@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import RoadmapError from './RoadmapError';
 
 interface RoadmapCanvasProps {
   nodes: RoadmapNode[];
@@ -99,6 +100,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(initialRfEdges);
   const [selectedNode, setSelectedNode] = useState<RoadmapNode | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const [error, setError] = useState<string | null>(null);
 
   // Handle connection (edge creation)
   const onConnectHandler: OnConnect = useCallback(
@@ -193,6 +195,15 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           onClose={() => setSelectedNode(null)}
           onUpdate={handleNodeUpdate}
           isMobile={isMobile}
+        />
+      )}
+      {error && (
+        <RoadmapError 
+          error={error} 
+          onRetry={() => {
+            setError(null);
+            // Add your retry logic here
+          }} 
         />
       )}
     </div>
