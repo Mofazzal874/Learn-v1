@@ -59,45 +59,42 @@ export const generateRoadmap = async (
     }
 
     const roadmapPrompt = `
-You are an expert learning path designer specialized in creating structured educational roadmaps.
+You are an expert JSON generator for learning roadmaps.
+CRITICAL: You must return a JSON array of nodes, wrapped in { "nodes": [...] }
 
-Task: Generate a comprehensive ${roadmapType} learning roadmap for "${prompt}" at a ${level} level.
-
-IMPORTANT CONSTRAINTS:
-1. Each node MUST have a maximum of 2 child nodes
-2. Each node should connect to a maximum of 3 other nodes total (including parents and children)
-3. Nodes MUST be numbered sequentially in learning order (1, 2, 3, etc.)
-4. The node title should start with the sequence number (e.g., "1. Introduction to Python")
-
-Guidelines for the roadmap:
-1. Each node should represent a distinct learning objective
-2. Maintain strict linear progression - each topic should build on previous ones
-3. Include practical exercises and hands-on components
-4. Break complex topics into smaller, manageable sub-topics
-5. Time estimates should be realistic for ${level} level learners
-
-Node Structure:
+Required format:
 {
-  "id": "node_1",  // Use sequential numbers in IDs
-  "title": "1. Topic Title", // Must include sequence number
-  "description": [
-    "What you'll learn in this section",
-    "Key concepts covered",
-    "Practical applications"
-  ],
-  "children": ["node_2", "node_3"],  // Maximum 2 children
-  "sequence": 1,  // Sequential order number
-  "timeNeeded": integer_hours
+  "nodes": [
+    {
+      "id": "node_1",
+      "title": "1. First Topic",
+      "description": ["Point 1", "Point 2", "Point 3"],
+      "children": ["node_2", "node_3"],
+      "sequence": 1,
+      "timeNeeded": 4
+    }
+  ]
 }
 
-Important:
-- Strictly maintain sequential ordering
-- Each node should connect to maximum 2-3 other nodes
-- Ensure linear progression in learning path
-- Root node must be sequence 1
-- Keep dependencies simple and clear
+Rules:
+1. Response must be a JSON object with a "nodes" array
+2. Each node must have ALL these fields: id, title, description, children, sequence, timeNeeded
+3. Title must start with sequence number (e.g., "1. Topic")
+4. Description must be an array of 2-3 strings
+5. Children must be an array of node IDs
+6. Maximum 2 child nodes per node
+7. Sequence must start at 1 and increment
+8. Generate 12-15 nodes in range  for ${level} level ${prompt}
+9. Maintain binary tree structure
+10. Ensure proper learning progression
 
-Generate the roadmap JSON for: ${prompt}`;
+Generate for: ${prompt}`;
+
+    // Update the system message to be more strict
+    const systemMessage = `You are a JSON generator that ONLY outputs valid JSON arrays. 
+Never include explanatory text. 
+Never include markdown formatting. 
+Always start with '[' and end with ']'.`;
 
     console.log("Making request to Groq API");
     const response = await axios.post(
@@ -107,7 +104,7 @@ Generate the roadmap JSON for: ${prompt}`;
         messages: [
           {
             role: "system",
-            content: "You are a helpful AI that creates structured learning roadmaps."
+            content: systemMessage
           },
           {
             role: "user",
@@ -115,7 +112,8 @@ Generate the roadmap JSON for: ${prompt}`;
           }
         ],
         temperature: 0.8,
-        max_tokens: 4000
+        max_tokens: 4000,
+        response_format: { type: "json_object" }  // Force JSON response
       },
       {
         headers: {
@@ -135,24 +133,41 @@ Generate the roadmap JSON for: ${prompt}`;
     const text = response.data.choices[0].message.content.trim();
     console.log("Raw AI response:", text);
 
-    let roadmap;
+    let parsedResponse;
     try {
-      roadmap = JSON.parse(text);
+      parsedResponse = JSON.parse(text);
     } catch (e) {
-      console.error("JSON parse error:", e);
-      console.error("Raw text that failed to parse:", text);
-      throw new Error("Failed to parse AI response as JSON");
+      throw new Error("Failed to parse JSON response");
     }
 
-    // Process nodes to add required fields and positions
-    const processedNodes: RoadmapNode[] = roadmap.map((node: any, index: number) => ({
-      ...node,
-      completed: false,
-      position: calculateNodePosition(index, roadmap.length),
-      timeConsumed: 0,
-    }));
+    // Ensure we have a nodes array
+    if (!parsedResponse.nodes || !Array.isArray(parsedResponse.nodes)) {
+      throw new Error("Invalid response format: missing nodes array");
+    }
 
-    console.log("Processed nodes:", processedNodes);
+    const roadmap = parsedResponse.nodes;
+
+    // Process and validate each node
+    const processedNodes: RoadmapNode[] = roadmap.map((node: any, index: number) => {
+      // Validate required fields
+      if (!node.id || !node.title || !Array.isArray(node.description) || 
+          !Array.isArray(node.children) || typeof node.sequence !== 'number' || 
+          typeof node.timeNeeded !== 'number') {
+        throw new Error(`Invalid node format at position ${index + 1}`);
+      }
+
+      // Return processed node with all required fields
+      return {
+        ...node,
+        completed: false,
+        timeConsumed: 0,
+        position: calculateNodePosition(index, roadmap.length)
+      };
+    });
+
+    // Sort by sequence
+    processedNodes.sort((a, b) => a.sequence - b.sequence);
+
     return processedNodes;
   } catch (error: any) {
     // Enhanced error handling
@@ -176,15 +191,40 @@ Generate the roadmap JSON for: ${prompt}`;
 };
 
 function calculateNodePosition(index: number, total: number) {
-  const VERTICAL_SPACING = 100;
-  const HORIZONTAL_SPACING = 200;
-  const nodesPerRow = Math.ceil(Math.sqrt(total));
+  // Tree layout configuration
+  const VERTICAL_SPACING = 100;     // Increased for more vertical space
+  const MIN_NODE_SPACING = 140;     // Increased for more horizontal space
+  const TOP_MARGIN = 50;
+  const LEVEL_PADDING = 50;         // Increased padding between subtrees
   
-  const row = Math.floor(index / nodesPerRow);
-  const col = index % nodesPerRow;
+  // Calculate the level (depth) of the node in the tree
+  const level = Math.floor(Math.log2(index + 1));
   
-  return {
-    x: col * HORIZONTAL_SPACING,
-    y: row * VERTICAL_SPACING
-  };
+  // Calculate position in current level
+  const positionInLevel = index - (Math.pow(2, level) - 1);
+  
+  // Calculate total nodes at this level
+  const nodesInLevel = Math.min(Math.pow(2, level), total - (Math.pow(2, level) - 1));
+  
+  // Base width calculation
+  const baseWidth = MIN_NODE_SPACING * Math.pow(2, level);
+  
+  // Calculate x position
+  // This ensures nodes spread out more as we go deeper in the tree
+  const xSpacing = baseWidth / (nodesInLevel + 1);
+  let x = (positionInLevel + 1) * xSpacing - (baseWidth / 2);
+  
+  // Add spacing between left and right subtrees
+  if (level > 0) {
+    const isRightSubtree = positionInLevel >= nodesInLevel / 2;
+    const spreadFactor = Math.pow(1.5, level); // Increase spread for deeper levels
+    x += isRightSubtree ? 
+      LEVEL_PADDING * spreadFactor : 
+      -LEVEL_PADDING * spreadFactor;
+  }
+  
+  // Calculate y position with fixed spacing
+  const y = level * VERTICAL_SPACING + TOP_MARGIN;
+
+  return { x, y };
 }

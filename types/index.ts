@@ -3,17 +3,18 @@
 export interface RoadmapNode {
   id: string;
   title: string;
-  description?: string[];
-  completed: boolean;
-  completionTime?: string; // ISO string
-  deadline?: string; // ISO string
-  timeNeeded?: number;
-  timeConsumed?: number;
+  description: string[];
   children: string[];
+  sequence: number;
+  timeNeeded: number;
+  timeConsumed: number;
+  completed: boolean;
   position: {
     x: number;
     y: number;
   };
+  completionTime?: string;
+  deadline?: string;
 }
 
 export interface RoadmapEdge {

@@ -15,6 +15,8 @@ import ReactFlow, {
   Node,
   Edge,
   Panel,
+  Position,
+  MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { RoadmapNode, RoadmapEdge } from "../types";
@@ -87,13 +89,49 @@ const mapReactFlowEdgesToRoadmapEdges = (reactFlowEdges: ReactFlowEdge[]): Roadm
   }));
 };
 
+const nodeStyle = {
+  padding: '8px',
+  borderRadius: '8px',
+  border: '2px solid #e2e8f0',
+  background: 'white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  width: 140,
+  fontSize: '11px',
+  textAlign: 'center' as const,
+};
+
+const edgeStyle = {
+  stroke: '#94a3b8',
+  strokeWidth: 2,
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 15,
+    height: 15,
+    color: '#94a3b8',
+  },
+};
+
 const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   nodes,
   edges,
   onUpdateNodes,
   onUpdateEdges,
 }) => {
-  const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes);
+  const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes).map(node => ({
+    ...node,
+    style: nodeStyle,
+    sourcePosition: Position.Bottom,
+    targetPosition: Position.Top,
+    data: {
+      ...node.data,
+      label: (
+        <div className="overflow-hidden">
+          <div className="font-semibold mb-1 truncate">{node.data.label}</div>
+          <div className="text-xs text-gray-500">{node.data.timeNeeded}h</div>
+        </div>
+      ),
+    },
+  }));
   const initialRfEdges = mapRoadmapEdgesToReactFlowEdges(edges);
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(initialRfNodes);
@@ -175,7 +213,20 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           onConnect={onConnectHandler}
           onNodeDragStop={onNodeDragStopHandler}
           onNodeClick={onNodeClick}
+          defaultEdgeOptions={{
+            type: 'default',
+            style: edgeStyle,
+            animated: true,
+            curvature: 0.5,
+          }}
           fitView
+          fitViewOptions={{
+            padding: 0.3,
+            minZoom: 0.4,
+            maxZoom: 1.2,
+          }}
+          minZoom={0.2}
+          maxZoom={1.5}
           attributionPosition="bottom-left"
         >
           <Controls className="bottom-4 right-4" />
