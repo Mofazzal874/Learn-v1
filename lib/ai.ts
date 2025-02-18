@@ -60,7 +60,7 @@ export const generateRoadmap = async (
 
     const roadmapPrompt = `
 You are an expert JSON generator for learning roadmaps.
-CRITICAL: You must return a JSON array of nodes, wrapped in { "nodes": [...] }
+CRITICAL: You must return a JSON object with a nodes array.
 
 Required format:
 {
@@ -76,19 +76,54 @@ Required format:
   ]
 }
 
-Rules:
-1. Response must be a JSON object with a "nodes" array
-2. Each node must have ALL these fields: id, title, description, children, sequence, timeNeeded
-3. Title must start with sequence number (e.g., "1. Topic")
-4. Description must be an array of 2-3 strings
-5. Children must be an array of node IDs
-6. Maximum 2 child nodes per node
-7. Sequence must start at 1 and increment
-8. Generate 12-15 nodes in range  for ${level} level ${prompt}
-9. Maintain binary tree structure
-10. Ensure proper learning progression
+STRICT REQUIREMENTS:
+1. ALL nodes must have these exact fields:
+   - id: string starting with "node_" followed by a number
+   - title: string starting with the sequence number
+   - description: array of 2-3 strings
+   - children: array of node IDs (can be empty)
+   - sequence: number starting from 1
+   - timeNeeded: number of hours (1-20)
 
-Generate for: ${prompt}`;
+2. Field requirements:
+   - No missing or null fields allowed
+   - description must be a non-empty array
+   - children must be an array (can be empty)
+   - sequence must be a positive number
+   - timeNeeded must be a positive number
+
+3. Node count requirements:
+   - Beginner level: minimum 8-10 nodes
+   - Intermediate level: minimum 11-15 nodes
+   - Advanced level: minimum 15-18 nodes
+
+4. Learning progression requirements:
+   - Start with fundamental concepts
+   - Each topic must build upon previous topics
+   - Include practical exercises or hands-on tasks
+   - Break complex topics into smaller sub-topics
+   - Maximum 2 child nodes per parent (binary tree structure)
+   - Ensure logical dependencies between connected nodes
+
+5. Description content requirements:
+   - First point: What you'll learn
+   - Second point: Key concepts/skills covered
+   - Third point: Practical application or exercise
+
+6. Time allocation:
+   - Beginner topics: 1-4 hours per node
+   - Intermediate topics: 2-6 hours per node
+   - Advanced topics: 4-10 hours per node
+   - Complex topics should be broken down into smaller chunks
+
+7. Topic organization:
+   - Group related concepts together
+   - Maintain clear prerequisite relationships
+   - Balance theoretical and practical content
+   - Include assessment/practice points
+   - End with a capstone or project node
+
+Generate a ${level} level learning roadmap for: ${prompt}`;
 
     // Update the system message to be more strict
     const systemMessage = `You are a JSON generator that ONLY outputs valid JSON arrays. 
@@ -111,7 +146,7 @@ Always start with '[' and end with ']'.`;
             content: roadmapPrompt
           }
         ],
-        temperature: 0.8,
+        temperature: 0.9,
         max_tokens: 4000,
         response_format: { type: "json_object" }  // Force JSON response
       },
@@ -149,24 +184,58 @@ Always start with '[' and end with ']'.`;
 
     // Process and validate each node
     const processedNodes: RoadmapNode[] = roadmap.map((node: any, index: number) => {
-      // Validate required fields
-      if (!node.id || !node.title || !Array.isArray(node.description) || 
-          !Array.isArray(node.children) || typeof node.sequence !== 'number' || 
-          typeof node.timeNeeded !== 'number') {
-        throw new Error(`Invalid node format at position ${index + 1}`);
-      }
+      try {
+        // Ensure all required fields exist with default values if needed
+        const processedNode = {
+          id: node.id || `node_${index + 1}`,
+          title: node.title || `${index + 1}. Untitled Node`,
+          description: Array.isArray(node.description) ? node.description : [],
+          children: Array.isArray(node.children) ? node.children : [],
+          sequence: typeof node.sequence === 'number' ? node.sequence : index + 1,
+          timeNeeded: typeof node.timeNeeded === 'number' ? node.timeNeeded : 0,
+          completed: false,
+          timeConsumed: 0,
+          position: calculateNodePosition(index, roadmap.length)
+        };
 
-      // Return processed node with all required fields
-      return {
-        ...node,
-        completed: false,
-        timeConsumed: 0,
-        position: calculateNodePosition(index, roadmap.length)
-      };
+        // Validate the processed node
+        if (!processedNode.title.match(/^\d+\./)) {
+          processedNode.title = `${processedNode.sequence}. ${processedNode.title.replace(/^\d+\.\s*/, '')}`;
+        }
+
+        if (processedNode.description.length === 0) {
+          processedNode.description = ["No description available"];
+        }
+
+        // Ensure children array contains valid node IDs
+        processedNode.children = processedNode.children.filter(childId => 
+          roadmap.some(n => n.id === childId)
+        );
+
+        return processedNode;
+      } catch (e) {
+        console.error(`Error processing node at position ${index + 1}:`, e);
+        // Return a valid default node instead of throwing
+        return {
+          id: `node_${index + 1}`,
+          title: `${index + 1}. Topic ${index + 1}`,
+          description: ["Content to be added"],
+          children: [],
+          sequence: index + 1,
+          timeNeeded: 1,
+          completed: false,
+          timeConsumed: 0,
+          position: calculateNodePosition(index, roadmap.length)
+        };
+      }
     });
 
-    // Sort by sequence
+    // Sort by sequence and fix any sequence gaps
     processedNodes.sort((a, b) => a.sequence - b.sequence);
+    processedNodes.forEach((node, index) => {
+      node.sequence = index + 1;
+      node.title = `${index + 1}. ${node.title.replace(/^\d+\.\s*/, '')}`;
+    });
 
     return processedNodes;
   } catch (error: any) {
