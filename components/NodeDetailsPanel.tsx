@@ -9,7 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { format } from "date-fns";
-import { Info } from "lucide-react";
+import { Info, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface NodeDetailsPanelProps {
   node: RoadmapNode;
@@ -53,24 +56,34 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
     );
   };
 
+  const handleCompletedChange = (checked: boolean) => {
+    onUpdate({
+      ...editableNode,
+      completed: checked,
+      completionTime: checked ? new Date().toISOString() : undefined,
+    });
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
         {isEditing ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Title</label>
+              <Label htmlFor="title" className="text-white">Title</Label>
               <Input
+                id="title"
                 name="title"
                 value={editableNode.title}
                 onChange={handleChange}
-                className="w-full"
+                className="bg-[#1a1a1a] border-white/10 text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
+              <Label htmlFor="description" className="text-white">Description</Label>
               <Textarea
+                id="description"
                 name="description"
                 value={Array.isArray(editableNode.description) 
                   ? editableNode.description.join('\n') 
@@ -81,31 +94,60 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
                     description: e.target.value.split('\n')
                   }));
                 }}
-                className="w-full min-h-[100px]"
+                className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Time Needed (hours)</label>
+              <Label htmlFor="timeNeeded" className="text-white">Time Needed (hours)</Label>
               <Input
-                type="number"
+                id="timeNeeded"
                 name="timeNeeded"
+                type="number"
                 value={editableNode.timeNeeded || 0}
                 onChange={handleChange}
-                className="w-full"
+                className="bg-[#1a1a1a] border-white/10 text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Time Consumed (hours)</label>
+              <Label htmlFor="timeConsumed" className="text-white">Time Consumed (hours)</Label>
               <Input
-                type="number"
+                id="timeConsumed"
                 name="timeConsumed"
+                type="number"
                 value={editableNode.timeConsumed || 0}
                 onChange={handleChange}
-                className="w-full"
+                className="bg-[#1a1a1a] border-white/10 text-white"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deadline" className="text-white">Deadline</Label>
+              <Input
+                id="deadline"
+                name="deadline"
+                type="date"
+                value={editableNode.deadline || ""}
+                onChange={handleChange}
+                className="bg-[#1a1a1a] border-white/10 text-white"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="completed"
+                checked={editableNode.completed || false}
+                onCheckedChange={handleCompletedChange}
+              />
+              <Label htmlFor="completed" className="text-white">Completed</Label>
+            </div>
+
+            {editableNode.completed && editableNode.completionTime && (
+              <div className="text-sm text-gray-400">
+                Completed on: {new Date(editableNode.completionTime).toLocaleDateString()}
+              </div>
+            )}
 
             <div className="flex space-x-2">
               <Button onClick={handleSave} className="flex-1">
@@ -165,30 +207,120 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
   );
 };
 
-const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = (props) => {
-  const { isMobile, node } = props;
+const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
+  node,
+  onClose,
+  onUpdate,
+  isMobile = false,
+}) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    onUpdate({
+      ...node,
+      [name]: value,
+    });
+  };
 
-  if (isMobile) {
-    return (
-      <div className="md:hidden">
-        <Sheet open={!!node} onOpenChange={() => props.onClose()}>
-          <SheetContent side="bottom" className="h-[80vh] w-full">
-            <SheetHeader>
-              <SheetTitle>Node Details</SheetTitle>
-            </SheetHeader>
-            <div className="h-[calc(80vh-4rem)]">
-              <NodeContent {...props} />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    );
-  }
+  const handleCompletedChange = (checked: boolean) => {
+    onUpdate({
+      ...node,
+      completed: checked,
+      completionTime: checked ? new Date().toISOString() : undefined,
+    });
+  };
 
   return (
-    <div className="hidden md:block w-80 h-full border-l border-gray-200 dark:border-gray-800">
-      <div className="h-full">
-        <NodeContent {...props} />
+    <div className={cn(
+      "flex flex-col h-full",
+      !isMobile && "w-96"
+    )}>
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <h3 className="text-lg font-semibold text-white">Node Details</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="text-gray-400 hover:text-white"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-white">Title</Label>
+          <Input
+            id="title"
+            name="title"
+            value={node.title}
+            onChange={handleInputChange}
+            className="bg-[#1a1a1a] border-white/10 text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-white">Description</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={node.description || ""}
+            onChange={handleInputChange}
+            className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="timeNeeded" className="text-white">Time Needed (hours)</Label>
+          <Input
+            id="timeNeeded"
+            name="timeNeeded"
+            type="number"
+            value={node.timeNeeded || ""}
+            onChange={handleInputChange}
+            className="bg-[#1a1a1a] border-white/10 text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="timeConsumed" className="text-white">Time Consumed (hours)</Label>
+          <Input
+            id="timeConsumed"
+            name="timeConsumed"
+            type="number"
+            value={node.timeConsumed || ""}
+            onChange={handleInputChange}
+            className="bg-[#1a1a1a] border-white/10 text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="deadline" className="text-white">Deadline</Label>
+          <Input
+            id="deadline"
+            name="deadline"
+            type="date"
+            value={node.deadline || ""}
+            onChange={handleInputChange}
+            className="bg-[#1a1a1a] border-white/10 text-white"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="completed"
+            checked={node.completed || false}
+            onCheckedChange={handleCompletedChange}
+          />
+          <Label htmlFor="completed" className="text-white">Completed</Label>
+        </div>
+
+        {node.completed && node.completionTime && (
+          <div className="text-sm text-gray-400">
+            Completed on: {new Date(node.completionTime).toLocaleDateString()}
+          </div>
+        )}
       </div>
     </div>
   );

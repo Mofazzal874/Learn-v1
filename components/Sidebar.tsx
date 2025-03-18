@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target } from 'lucide-react';
+import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target, Map } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: Home, label: 'Dashboard', href: '/private/dashboard' },
         { icon: Compass, label: 'Explore', href: '/explore' },
         { icon: BookOpen, label: 'My Courses', href: '/private/my-courses' },
+        { icon: Map, label: 'Roadmap', href: '/roadmap' },
       ]
     },
     {
