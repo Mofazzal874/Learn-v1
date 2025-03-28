@@ -80,9 +80,16 @@ REQUIREMENTS:
 - id format: "node_X" where X is a number
 - title format: must start with sequence number (e.g., "1. Introduction")
 - For ${level} level: create ${level === "beginner" ? "8-10" : level === "intermediate" ? "11-15" : "15-18"} nodes
-- Ensure proper progression from fundamentals to advanced topics
-- Maximum 2 child nodes per parent
+- Maximum 2 child nodes per parent (binary tree structure)
 - For time allocation: beginner (1-4h), intermediate (2-6h), advanced (4-10h)
+
+TREE STRUCTURE REQUIREMENTS:
+- Start with a single root node (node_1)
+- Each node must have 0-2 children only
+- IMPORTANT: Create a SINGLE connected tree where all nodes are reachable from the root
+- Ensure parent-child relationships follow a logical progression (prerequisites → advanced topics)
+- Every node (except the root) must be a child of exactly one other node
+- The tree should progress from foundational topics to advanced concepts
 
 Generate a complete, coherent roadmap for learning ${prompt} at a ${level} level.`;
 
@@ -229,6 +236,9 @@ Only the raw JSON is allowed in your response.`;
       node.title = `${index + 1}. ${node.title.replace(/^\d+\.\s*/, '')}`;
     });
 
+    // Ensure the tree is connected by checking and fixing the relationship structure
+    ensureConnectedTree(processedNodes);
+
     return processedNodes;
   } catch (error: any) {
     // Enhanced error handling
@@ -274,16 +284,17 @@ function createFallbackNodes(prompt: string, level: string): RoadmapNode[] {
   const nodeCount = level === "beginner" ? 8 : level === "intermediate" ? 12 : 15;
   const nodes: RoadmapNode[] = [];
   
+  // Create nodes first
   for (let i = 0; i < nodeCount; i++) {
     const node: RoadmapNode = {
       id: `node_${i + 1}`,
-      title: `${i + 1}. ${prompt} Topic ${i + 1}`,
+      title: `${i + 1}. ${prompt} ${i === 0 ? 'Fundamentals' : `Topic ${i + 1}`}`,
       description: [
-        `Learn the basics of ${prompt} concept ${i + 1}`,
+        `Learn the ${i === 0 ? 'basics' : 'concepts'} of ${prompt} ${i === 0 ? 'fundamentals' : `topic ${i + 1}`}`,
         `Key areas: Theory, Practice, Application`,
-        `Complete exercises related to ${prompt} topic ${i + 1}`
+        `Complete exercises related to ${prompt} ${i === 0 ? 'basics' : `topic ${i + 1}`}`
       ],
-      children: i < nodeCount - 2 ? [`node_${i + 2}`, `node_${i + 3}`].filter(n => n.split('_')[1] <= nodeCount.toString()) : [],
+      children: [], // Will be filled in next step
       sequence: i + 1,
       timeNeeded: Math.floor(Math.random() * 5) + 1,
       timeConsumed: 0,
@@ -293,8 +304,48 @@ function createFallbackNodes(prompt: string, level: string): RoadmapNode[] {
     nodes.push(node);
   }
   
+  // Create a binary tree structure
+  // Each node i has children at positions 2i+1 and 2i+2 (if they exist)
+  for (let i = 0; i < nodeCount; i++) {
+    const leftChildIndex = 2 * i + 1;
+    const rightChildIndex = 2 * i + 2;
+    
+    if (leftChildIndex < nodeCount) {
+      nodes[i].children.push(nodes[leftChildIndex].id);
+    }
+    
+    if (rightChildIndex < nodeCount) {
+      nodes[i].children.push(nodes[rightChildIndex].id);
+    }
+  }
+  
+  // Adjust node titles to reflect their position in the tree
+  nodes.forEach((node, index) => {
+    if (index === 0) {
+      node.title = `1. Introduction to ${prompt}`;
+    } else {
+      const depth = Math.floor(Math.log2(index + 1));
+      const phase = depth <= 1 ? 'Fundamentals' : depth === 2 ? 'Intermediate Concepts' : 'Advanced Topics';
+      node.title = `${index + 1}. ${phase}: ${prompt} ${nodeTypes[index % nodeTypes.length]}`;
+    }
+  });
+  
   return nodes;
 }
+
+// Different types of learning nodes for more variety in fallback nodes
+const nodeTypes = [
+  'Concepts',
+  'Practical Application',
+  'Theory',
+  'Problem Solving',
+  'Case Study',
+  'Project Implementation',
+  'Best Practices',
+  'Tools & Frameworks',
+  'Design Patterns',
+  'Evaluation & Testing'
+];
 
 function calculateNodePosition(index: number, total: number) {
   // Tree layout configuration
@@ -333,4 +384,81 @@ function calculateNodePosition(index: number, total: number) {
   const y = level * VERTICAL_SPACING + TOP_MARGIN;
 
   return { x, y };
+}
+
+// Function to ensure all nodes are connected in a single tree
+function ensureConnectedTree(nodes: RoadmapNode[]) {
+  if (nodes.length === 0) return;
+  
+  // Create a set to track which nodes are reachable from the root
+  const connectedNodes = new Set<string>();
+  const nodeMap = new Map<string, RoadmapNode>();
+  
+  // Build a map of nodes by ID for quick access
+  nodes.forEach(node => nodeMap.set(node.id, node));
+  
+  // Add the first node (root) to the connected set
+  connectedNodes.add(nodes[0].id);
+  
+  // Recursively mark all nodes reachable from the root
+  function markReachableNodes(nodeId: string) {
+    const node = nodeMap.get(nodeId);
+    if (!node) return;
+    
+    node.children.forEach(childId => {
+      if (!connectedNodes.has(childId)) {
+        connectedNodes.add(childId);
+        markReachableNodes(childId);
+      }
+    });
+  }
+  
+  // Start from the root node
+  markReachableNodes(nodes[0].id);
+  
+  // Find disconnected nodes
+  const disconnectedNodes = nodes.filter(node => !connectedNodes.has(node.id));
+  
+  // Connect disconnected nodes to the tree
+  if (disconnectedNodes.length > 0) {
+    console.log(`Found ${disconnectedNodes.length} disconnected nodes. Connecting to tree...`);
+    
+    // Connect each disconnected node to an appropriate parent
+    disconnectedNodes.forEach(node => {
+      // Find a potential parent based on sequence number
+      const potentialParents = nodes.filter(n => 
+        connectedNodes.has(n.id) && 
+        n.sequence < node.sequence &&
+        n.children.length < 2 // Limit to 2 children per node
+      );
+      
+      if (potentialParents.length > 0) {
+        // Sort by sequence to find closest parent
+        potentialParents.sort((a, b) => b.sequence - a.sequence);
+        const parent = potentialParents[0];
+        
+        // Add the disconnected node as a child of the parent
+        parent.children.push(node.id);
+        connectedNodes.add(node.id);
+        
+        console.log(`Connected node ${node.id} (${node.title}) to parent ${parent.id} (${parent.title})`);
+      } else {
+        // If no suitable parent found, connect to the root node
+        nodes[0].children.push(node.id);
+        connectedNodes.add(node.id);
+        console.log(`Connected node ${node.id} (${node.title}) to root node`);
+      }
+    });
+    
+    // Recursively ensure all nodes are now connected
+    markReachableNodes(nodes[0].id);
+    
+    // Check if there are still disconnected nodes
+    const stillDisconnected = nodes.filter(node => !connectedNodes.has(node.id));
+    if (stillDisconnected.length > 0) {
+      console.warn(`Still have ${stillDisconnected.length} disconnected nodes after fixing`);
+    } else {
+      console.log('All nodes are now connected in a single tree');
+    }
+  }
 }
