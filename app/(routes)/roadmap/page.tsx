@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RoadmapForm from "@/components/RoadmapForm";
 import RoadmapCanvas from "@/components/RoadmapCanvas";
+import RoadmapError from "@/components/RoadmapError";
 import { RoadmapNode, RoadmapEdge } from "@/types";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
@@ -12,10 +13,22 @@ export default function CreateRoadmap() {
   const [nodes, setNodes] = useState<RoadmapNode[]>([]);
   const [edges, setEdges] = useState<RoadmapEdge[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFormData, setLastFormData] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const router = useRouter();
 
-  const handleGenerate = async (formData: any) => {
+  const handleGenerate = async (formData: any, isRetry = false) => {
     setLoading(true);
+    setError(null);
+    setLastFormData(formData);
+    
+    if (isRetry) {
+      setRetryCount(prev => prev + 1);
+    } else {
+      setRetryCount(0);
+    }
+    
     try {
       console.log("Sending request with data:", formData);
       
@@ -37,17 +50,52 @@ export default function CreateRoadmap() {
       console.log("Response data:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate roadmap");
+        const errorMsg = data.error || "Failed to generate roadmap";
+        const detailsMsg = data.details ? `: ${data.details}` : "";
+        console.error(`API Error: ${errorMsg}${detailsMsg}`);
+        setError(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (!data.nodes || data.nodes.length === 0) {
+        const errorMsg = "No roadmap nodes were generated. Please try again.";
+        setError(errorMsg);
+        throw new Error(errorMsg);
       }
 
       setNodes(data.nodes);
       setEdges(data.edges);
+      setError(null);
       toast.success("Roadmap generated successfully!");
     } catch (error: any) {
       console.error("Generation error:", error);
       toast.error(error.message || "Failed to generate roadmap");
+      
+      // Error is already set in the try block
+      if (!error.message.includes("No roadmap nodes were generated")) {
+        setError(error.message || "An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastFormData) {
+      // If we've tried 3 times, try with slightly modified parameters
+      if (retryCount >= 2) {
+        // Modify the prompt slightly to help the model
+        const modifiedPromData = {
+          ...lastFormData,
+          prompt: `${lastFormData.prompt} curriculum`, // Add "curriculum" to make it more educational
+        };
+        handleGenerate(modifiedPromData, true);
+        toast.info("Trying with modified parameters...");
+      } else {
+        handleGenerate(lastFormData, true);
+      }
+    } else {
+      setError(null);
     }
   };
 
@@ -84,6 +132,13 @@ export default function CreateRoadmap() {
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900" />
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full">
+              <RoadmapError 
+                error={error} 
+                onRetry={handleRetry} 
+              />
             </div>
           ) : nodes.length > 0 ? (
             <>
