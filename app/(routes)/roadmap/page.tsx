@@ -6,7 +6,7 @@ import RoadmapCanvas from "@/components/RoadmapCanvas";
 import RoadmapError from "@/components/RoadmapError";
 import { RoadmapNode, RoadmapEdge } from "@/types";
 import { useRouter } from "next/navigation";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, Map, ChevronLeft, ChevronRight } from "lucide-react";
@@ -104,26 +104,63 @@ export default function CreateRoadmap() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (name: string) => {
     setSaving(true);
     try {
-      const response = await fetch("/api/roadmap/create", {
+      console.log("Starting to save roadmap with name:", name);
+      
+      // Create a sanitized version of nodes and edges to prevent circular references
+      const sanitizedNodes = nodes.map(node => ({
+        id: node.id,
+        title: node.title,
+        description: node.description,
+        completed: node.completed,
+        completionTime: node.completionTime,
+        deadline: node.deadline,
+        timeNeeded: node.timeNeeded,
+        timeConsumed: node.timeConsumed,
+        children: node.children,
+        position: node.position,
+        sequence: node.sequence
+      }));
+      
+      const sanitizedEdges = edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type,
+        animated: edge.animated,
+        label: edge.label
+      }));
+      
+      console.log("Sanitized data:", { 
+        nodeCount: sanitizedNodes.length, 
+        edgeCount: sanitizedEdges.length 
+      });
+      
+      const response = await fetch("/api/roadmap/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify({
+          name,
+          nodes: sanitizedNodes,
+          edges: sanitizedEdges,
+        }),
       });
 
+      console.log("Save response status:", response.status);
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save roadmap");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error response:", errorData);
+        throw new Error(errorData.error || "Failed to save roadmap");
       }
 
-      const data = await response.json();
-      toast.success("Roadmap saved successfully!");
-      router.push(`/roadmap/${data._id}`);
-    } catch (error: any) {
-      console.error("Error:", error);
-      toast.error(error.message || "Failed to save roadmap");
+      toast.success("Roadmap saved successfully");
+      router.push("/roadmap/saved");
+    } catch (error) {
+      console.error("Error saving roadmap:", error);
+      toast.error("Failed to save roadmap");
     } finally {
       setSaving(false);
     }
@@ -131,7 +168,6 @@ export default function CreateRoadmap() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <Toaster position="top-center" />
       <div className="flex flex-col md:flex-row h-screen">
         {/* Sidebar Form */}
         <div 
@@ -199,26 +235,9 @@ export default function CreateRoadmap() {
                 onUpdateNodes={setNodes}
                 onUpdateEdges={setEdges}
                 isFormCollapsed={isSidebarCollapsed}
+                onSave={handleSave}
+                isSaving={saving}
               />
-              <div className="absolute bottom-6 right-6">
-                <Card className="bg-[#141414] border-white/10">
-                  <Button
-                    onClick={handleSave}
-                    size="lg"
-                    className="px-8 bg-blue-600 hover:bg-blue-700"
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Roadmap'
-                    )}
-                  </Button>
-                </Card>
-              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full space-y-6 p-8">

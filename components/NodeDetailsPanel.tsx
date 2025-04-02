@@ -21,16 +21,43 @@ interface NodeDetailsPanelProps {
   isMobile?: boolean;
 }
 
+const ensureStringTitle = (title: any): string => {
+  if (typeof title === 'string') {
+    return title;
+  }
+  if (title && typeof title === 'object') {
+    // Handle React elements in the title
+    if (title.props && title.props.children) {
+      const children = title.props.children;
+      if (Array.isArray(children)) {
+        // If children is an array, try to extract text content
+        return children.map(child => 
+          typeof child === 'string' ? child : 
+          (child && child.props && child.props.children) || ''
+        ).join('');
+      } else if (typeof children === 'string') {
+        return children;
+      }
+    }
+    // Fallback to string representation
+    return String(title);
+  }
+  return String(title || '');
+};
+
 const NodeContent: React.FC<NodeDetailsPanelProps> = ({
   node,
   onClose,
   onUpdate,
 }) => {
-  const [editableNode, setEditableNode] = useState<RoadmapNode>(node);
+  const [editableNode, setEditableNode] = useState<RoadmapNode>({...node, title: ensureStringTitle(node.title)});
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    setEditableNode(node);
+    const nodeCopy = {...node};
+    nodeCopy.title = ensureStringTitle(node.title);
+    setEditableNode(nodeCopy);
+    console.log("Node updated in NodeContent with fixed title:", nodeCopy.title);
   }, [node]);
 
   const handleChange = (
@@ -64,6 +91,12 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
     });
   };
 
+  const nodeTitle = typeof editableNode.title === 'string' 
+    ? editableNode.title 
+    : JSON.stringify(editableNode.title);
+
+  console.log("Rendering NodeContent with title:", nodeTitle);
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
@@ -74,7 +107,7 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
               <Input
                 id="title"
                 name="title"
-                value={editableNode.title}
+                value={nodeTitle}
                 onChange={handleChange}
                 className="bg-[#1a1a1a] border-white/10 text-white"
               />
@@ -89,9 +122,10 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
                   ? editableNode.description.join('\n') 
                   : editableNode.description || ''}
                 onChange={(e) => {
+                  const newDescription = e.target.value.split('\n').filter(line => line.trim());
                   setEditableNode(prev => ({
                     ...prev,
-                    description: e.target.value.split('\n')
+                    description: newDescription
                   }));
                 }}
                 className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
@@ -161,15 +195,15 @@ const NodeContent: React.FC<NodeDetailsPanelProps> = ({
         ) : (
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold mb-2">{editableNode.title}</h2>
+              <h2 className="text-xl font-semibold mb-2 text-white">{nodeTitle}</h2>
               <div className="space-y-2">
-                <h3 className="font-medium">Description</h3>
+                <h3 className="font-medium text-white">Description</h3>
                 <ul className="list-disc pl-5 space-y-1">
                   {Array.isArray(editableNode.description) 
                     ? editableNode.description.map((desc, index) => (
-                        <li key={index} className="text-sm">{desc}</li>
+                        <li key={index} className="text-sm text-gray-300">{desc}</li>
                       ))
-                    : <li className="text-sm">{editableNode.description}</li>
+                    : <li className="text-sm text-gray-300">{editableNode.description}</li>
                   }
                 </ul>
               </div>
@@ -213,19 +247,21 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   onUpdate,
   isMobile = false,
 }) => {
+  const fixedNode = {...node, title: ensureStringTitle(node.title)};
+  
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     onUpdate({
-      ...node,
+      ...fixedNode,
       [name]: value,
     });
   };
 
   const handleCompletedChange = (checked: boolean) => {
     onUpdate({
-      ...node,
+      ...fixedNode,
       completed: checked,
       completionTime: checked ? new Date().toISOString() : undefined,
     });
@@ -254,7 +290,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
           <Input
             id="title"
             name="title"
-            value={node.title}
+            value={fixedNode.title}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"
           />
@@ -265,8 +301,16 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
           <Textarea
             id="description"
             name="description"
-            value={node.description || ""}
-            onChange={handleInputChange}
+            value={Array.isArray(fixedNode.description) 
+              ? fixedNode.description.join('\n') 
+              : fixedNode.description || ''}
+            onChange={(e) => {
+              const newDescription = e.target.value.split('\n').filter(line => line.trim());
+              onUpdate({
+                ...fixedNode,
+                description: newDescription
+              });
+            }}
             className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
           />
         </div>
@@ -277,7 +321,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             id="timeNeeded"
             name="timeNeeded"
             type="number"
-            value={node.timeNeeded || ""}
+            value={fixedNode.timeNeeded || ""}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"
           />
@@ -289,7 +333,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             id="timeConsumed"
             name="timeConsumed"
             type="number"
-            value={node.timeConsumed || ""}
+            value={fixedNode.timeConsumed || ""}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"
           />
@@ -301,7 +345,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             id="deadline"
             name="deadline"
             type="date"
-            value={node.deadline || ""}
+            value={fixedNode.deadline || ""}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"
           />
@@ -310,15 +354,15 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         <div className="flex items-center space-x-2">
           <Switch
             id="completed"
-            checked={node.completed || false}
+            checked={fixedNode.completed || false}
             onCheckedChange={handleCompletedChange}
           />
           <Label htmlFor="completed" className="text-white">Completed</Label>
         </div>
 
-        {node.completed && node.completionTime && (
+        {fixedNode.completed && fixedNode.completionTime && (
           <div className="text-sm text-gray-400">
-            Completed on: {new Date(node.completionTime).toLocaleDateString()}
+            Completed on: {new Date(fixedNode.completionTime).toLocaleDateString()}
           </div>
         )}
       </div>

@@ -17,59 +17,109 @@ import ReactFlow, {
   Panel,
   Position,
   MarkerType,
+  EdgeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { RoadmapNode, RoadmapEdge } from "../types";
 import NodeDetailsPanel from "./NodeDetailsPanel";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import RoadmapError from './RoadmapError';
 import { cn } from "@/lib/utils";
+import SaveRoadmapDialog from "./SaveRoadmapDialog";
 
 interface RoadmapCanvasProps {
-  nodes: RoadmapNode[];
-  edges: RoadmapEdge[];
-  onUpdateNodes: (nodes: RoadmapNode[]) => void;
-  onUpdateEdges: (edges: RoadmapEdge[]) => void;
+  // Support both prop patterns
+  nodes?: RoadmapNode[];
+  edges?: RoadmapEdge[];
+  onUpdateNodes?: (nodes: RoadmapNode[]) => void;
+  onUpdateEdges?: (edges: RoadmapEdge[]) => void;
+  
+  // New prop pattern
+  initialNodes?: RoadmapNode[];
+  initialEdges?: Edge[];
+  onNodesChange?: (nodes: RoadmapNode[]) => void;
+  onEdgesChange?: (edges: Edge[]) => void;
+  
+  // Common props
   isFormCollapsed?: boolean;
+  onSave?: (name: string) => Promise<void>;
+  isSaving?: boolean;
+  readOnly?: boolean;
 }
+
+// Add this helper function at the top of the file (before the component)
+const ensureStringTitle = (title: any): string => {
+  if (typeof title === 'string') {
+    return title;
+  }
+  if (title && typeof title === 'object') {
+    // Handle React elements in the title
+    if (title.props && title.props.children) {
+      const children = title.props.children;
+      if (Array.isArray(children)) {
+        // If children is an array, try to extract text content
+        return children.map(child => 
+          typeof child === 'string' ? child : 
+          (child && child.props && child.props.children) || ''
+        ).join('');
+      } else if (typeof children === 'string') {
+        return children;
+      }
+    }
+    // Fallback to string representation
+    return String(title);
+  }
+  return String(title || '');
+};
 
 // Mapping functions
 const mapRoadmapNodesToReactFlowNodes = (roadmapNodes: RoadmapNode[]): Node[] => {
-  return roadmapNodes.map((node) => ({
-    id: node.id,
-    data: {
-      label: node.title,
-      description: node.description,
-      completed: node.completed,
-      completionTime: node.completionTime,
-      deadline: node.deadline,
-      timeNeeded: node.timeNeeded,
-      timeConsumed: node.timeConsumed,
-      children: node.children,
-    },
-    position: node.position,
-  }));
+  return roadmapNodes.map((node) => {
+    // Ensure the title is a string
+    const title = ensureStringTitle(node.title);
+    
+    return {
+      id: node.id,
+      data: {
+        label: title,
+        description: node.description,
+        completed: node.completed,
+        completionTime: node.completionTime,
+        deadline: node.deadline,
+        timeNeeded: node.timeNeeded,
+        timeConsumed: node.timeConsumed,
+        children: node.children,
+      },
+      position: node.position,
+    };
+  });
 };
 
 const mapReactFlowNodesToRoadmapNodes = (reactFlowNodes: Node[]): RoadmapNode[] => {
-  return reactFlowNodes.map((node) => ({
-    id: node.id,
-    title: node.data.label,
-    description: node.data.description,
-    completed: node.data.completed,
-    completionTime: node.data.completionTime,
-    deadline: node.data.deadline,
-    timeNeeded: node.data.timeNeeded,
-    timeConsumed: node.data.timeConsumed,
-    children: node.data.children,
-    position: node.position,
-  }));
+  return reactFlowNodes.map((node, index) => {
+    // Ensure the label is a string
+    const title = ensureStringTitle(node.data.label);
+    
+    return {
+      id: node.id,
+      title: title,
+      description: node.data.description,
+      completed: node.data.completed,
+      completionTime: node.data.completionTime,
+      deadline: node.data.deadline,
+      timeNeeded: node.data.timeNeeded,
+      timeConsumed: node.data.timeConsumed,
+      children: node.data.children,
+      position: node.position,
+      sequence: index + 1
+    };
+  });
 };
 
-const mapRoadmapEdgesToReactFlowEdges = (roadmapEdges: RoadmapEdge[]): ReactFlowEdge[] => {
+const mapRoadmapEdgesToReactFlowEdges = (roadmapEdges: RoadmapEdge[] | Edge[]): Edge[] => {
   return roadmapEdges.map((edge) => ({
     id: edge.id,
     source: edge.source,
@@ -80,7 +130,7 @@ const mapRoadmapEdgesToReactFlowEdges = (roadmapEdges: RoadmapEdge[]): ReactFlow
   }));
 };
 
-const mapReactFlowEdgesToRoadmapEdges = (reactFlowEdges: ReactFlowEdge[]): RoadmapEdge[] => {
+const mapReactFlowEdgesToRoadmapEdges = (reactFlowEdges: Edge[]): RoadmapEdge[] => {
   return reactFlowEdges.map((edge) => ({
     id: edge.id,
     source: edge.source,
@@ -105,21 +155,31 @@ const nodeStyle = {
 const edgeStyle = {
   stroke: '#94a3b8',
   strokeWidth: 2,
-  markerEnd: {
-    type: MarkerType.ArrowClosed,
-    width: 15,
-    height: 15,
-    color: '#94a3b8',
-  },
 };
 
 const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
-  nodes,
-  edges,
+  // Support both prop patterns
+  nodes: propNodes,
+  edges: propEdges,
   onUpdateNodes,
   onUpdateEdges,
+  
+  // New prop pattern
+  initialNodes: propInitialNodes,
+  initialEdges: propInitialEdges,
+  onNodesChange,
+  onEdgesChange,
+  
+  // Common props
   isFormCollapsed = false,
+  onSave,
+  isSaving = false,
+  readOnly = false,
 }) => {
+  // Determine which set of props to use
+  const nodes = propNodes || propInitialNodes || [];
+  const edges = propEdges || propInitialEdges || [];
+
   const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes).map(node => ({
     ...node,
     style: nodeStyle,
@@ -137,8 +197,8 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   }));
   const initialRfEdges = mapRoadmapEdgesToReactFlowEdges(edges);
 
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(initialRfNodes);
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(initialRfEdges);
+  const [rfNodes, setRfNodes, onNodesChangeInternal] = useNodesState(initialRfNodes);
+  const [rfEdges, setRfEdges, onEdgesChangeInternal] = useEdgesState(initialRfEdges);
   const [selectedNode, setSelectedNode] = useState<RoadmapNode | null>(null);
   const [isDetailsPanelCollapsed, setDetailsPanelCollapsed] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -146,9 +206,11 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
 
   // Handle connection (edge creation)
   const onConnectHandler: OnConnect = useCallback(
-    (params: Edge | Connection) =>
-      setRfEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setRfEdges]
+    (params: Edge | Connection) => {
+      if (readOnly) return;
+      setRfEdges((eds) => addEdge({ ...params, animated: true }, eds));
+    },
+    [setRfEdges, readOnly]
   );
 
   // Handle node click
@@ -163,28 +225,55 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   // Handle node drag stop
   const onNodeDragStopHandler = useCallback(
     (event: React.MouseEvent, node: Node<any, any>) => {
+      if (readOnly) return;
       const updatedNodes = rfNodes.map((n) =>
         n.id === node.id ? { ...n, position: node.position } : n
       );
       setRfNodes(updatedNodes);
     },
-    [rfNodes, setRfNodes]
+    [rfNodes, setRfNodes, readOnly]
   );
 
-  // Sync local nodes state with parent component
+  // Sync local nodes state with parent component (old API)
   useEffect(() => {
-    const updatedRoadmapNodes = mapReactFlowNodesToRoadmapNodes(rfNodes);
-    onUpdateNodes(updatedRoadmapNodes);
+    if (onUpdateNodes) {
+      const updatedRoadmapNodes = mapReactFlowNodesToRoadmapNodes(rfNodes);
+      onUpdateNodes(updatedRoadmapNodes);
+    }
   }, [rfNodes, onUpdateNodes]);
 
-  // Sync local edges state with parent component
+  // Sync local edges state with parent component (old API)
   useEffect(() => {
-    const updatedRoadmapEdges = mapReactFlowEdgesToRoadmapEdges(rfEdges);
-    onUpdateEdges(updatedRoadmapEdges);
+    if (onUpdateEdges) {
+      const updatedRoadmapEdges = mapReactFlowEdgesToRoadmapEdges(rfEdges);
+      onUpdateEdges(updatedRoadmapEdges);
+    }
   }, [rfEdges, onUpdateEdges]);
+
+  // Sync with new API
+  useEffect(() => {
+    if (onNodesChange) {
+      const updatedRoadmapNodes = mapReactFlowNodesToRoadmapNodes(rfNodes);
+      onNodesChange(updatedRoadmapNodes);
+    }
+  }, [rfNodes, onNodesChange]);
+
+  useEffect(() => {
+    if (onEdgesChange) {
+      const updatedRoadmapEdges = mapReactFlowEdgesToRoadmapEdges(rfEdges);
+      onEdgesChange(updatedRoadmapEdges);
+    }
+  }, [rfEdges, onEdgesChange]);
 
   // Handle node update from NodeDetailsPanel
   const handleNodeUpdate = (updatedNode: RoadmapNode) => {
+    if (readOnly) return;
+    
+    console.log("Updating node with title:", updatedNode.title);
+    
+    // Ensure the title is a string
+    const title = ensureStringTitle(updatedNode.title);
+    
     setRfNodes((nds) =>
       nds.map((n) =>
         n.id === updatedNode.id
@@ -192,7 +281,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
               ...n,
               data: {
                 ...n.data,
-                label: updatedNode.title,
+                label: title,
                 description: updatedNode.description,
                 completed: updatedNode.completed,
                 completionTime: updatedNode.completionTime,
@@ -205,7 +294,14 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           : n
       )
     );
-    setSelectedNode(updatedNode);
+    
+    // Update the title in the updated node before setting it
+    const fixedUpdatedNode = {
+      ...updatedNode,
+      title: title
+    };
+    
+    setSelectedNode(fixedUpdatedNode);
   };
 
   return (
@@ -217,8 +313,8 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
         <ReactFlow
           nodes={rfNodes}
           edges={rfEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onNodesChange={onNodesChangeInternal}
+          onEdgesChange={onEdgesChangeInternal}
           onConnect={onConnectHandler}
           onNodeDragStop={onNodeDragStopHandler}
           onNodeClick={onNodeClick}
@@ -226,7 +322,10 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
             type: 'default',
             style: edgeStyle,
             animated: true,
-            curvature: 0.5,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#94a3b8',
+            },
           }}
           fitView
           fitViewOptions={{
@@ -237,6 +336,9 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           minZoom={0.2}
           maxZoom={1.5}
           attributionPosition="bottom-left"
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          elementsSelectable={!readOnly}
         >
           <Controls className="bottom-4 right-4" />
           <MiniMap className="bottom-4 right-16" />
@@ -250,7 +352,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
         </ReactFlow>
       </div>
 
-      {selectedNode && !isMobile && (
+      {selectedNode && !isMobile && !readOnly && (
         <div className={cn(
           "h-full border-l border-white/10 bg-[#141414] transition-all duration-300 ease-in-out overflow-hidden",
           isDetailsPanelCollapsed ? "w-0" : "w-96"
@@ -289,7 +391,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
       )}
 
       {/* Mobile View */}
-      {selectedNode && isMobile && (
+      {selectedNode && isMobile && !readOnly && (
         <Sheet>
           <SheetContent side="bottom" className="h-[90vh] bg-[#141414] border-t border-white/10">
             <SheetHeader className="pb-4">
@@ -314,6 +416,13 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
             // Add your retry logic here
           }} 
         />
+      )}
+
+      {/* Save Button */}
+      {onSave && !readOnly && (
+        <div className="absolute bottom-6 right-6">
+          <SaveRoadmapDialog onSave={onSave} isSaving={isSaving} />
+        </div>
       )}
     </div>
   );

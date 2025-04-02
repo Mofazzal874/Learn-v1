@@ -21,7 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: Home, label: 'Dashboard', href: '/private/dashboard' },
         { icon: Compass, label: 'Explore', href: '/explore' },
         { icon: BookOpen, label: 'My Courses', href: '/private/my-courses' },
-        { icon: Map, label: 'Roadmap', href: '/roadmap' },
+        { icon: Map, label: 'Create Roadmap', href: '/roadmap' },
+        { icon: Map, label: 'Saved Roadmaps', href: '/roadmap/saved' },
       ]
     },
     {
