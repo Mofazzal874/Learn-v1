@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Code, Brain, ChartBar, Atom, Globe, Database, Shield, Star } from "lucide-react";
+import { BookOpen, Code, Brain, ChartBar, Atom, Globe, Database, Shield, Star, Layout, LineChart, Rocket, Server, Smartphone } from "lucide-react";
 import Link from "next/link";
+import { getSession } from "@/lib/getSession";
+import { SearchBar } from "@/components/SearchBar";
 
 type CategoryColor = 'blue' | 'purple' | 'pink' | 'green' | 'orange' | 'yellow' | 'red';
 
@@ -194,62 +196,135 @@ function CourseCard({ course, showRating = false }: { course: Course; showRating
   );
 }
 
-export default function ExplorePage() {
+function CategoryCard({ category }: { category: Category }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto mb-16">
-        <h1 className="text-4xl font-bold mb-4">Explore Courses</h1>
-        <p className="text-gray-400 text-lg">Discover new skills and expand your knowledge</p>
-      </div>
+    <Link href={`/explore/category/${category.title.toLowerCase()}`}>
+      <Card className={`bg-[#141414] border ${colorMap[category.color]} transition-colors h-full hover:scale-[1.02] transition-transform duration-200`}>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${category.color}`}>
+              <category.icon className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">{category.title}</h3>
+              <p className="text-sm text-gray-400">{category.courses} courses</p>
+            </div>
+          </div>
+          <p className="text-gray-400 text-sm">{category.description}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
-      {/* Categories Section */}
-      <div className="max-w-7xl mx-auto mb-16">
-        <h2 className="text-2xl font-semibold mb-8 text-white">Browse Categories</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {categories.map((category) => {
-            const Icon = category.icon;
-            const colors = colorMap[category.color];
-            return (
-              <Link 
-                key={category.title} 
-                href={`/explore/${category.title.toLowerCase()}`}
-                className="block"
-              >
-                <Card className={`bg-[#141414] border ${colors.split(' ')[0]} hover:${colors.split(' ')[1]} shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] cursor-pointer group`}>
-                  <CardContent className="p-6">
-                    <div className={`w-12 h-12 rounded-lg ${colors.split(' ')[2]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className={`w-6 h-6 ${colors.split(' ')[3]}`} />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2 text-white group-hover:text-blue-400 transition-colors">{category.title}</h3>
-                    <p className="text-gray-300 text-sm mb-4">{category.description}</p>
-                    <div className="text-sm text-gray-400">{category.courses} courses</div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+export default async function ExplorePage({
+  searchParams
+}: {
+  searchParams: { q?: string }
+}) {
+  const session = await getSession();
+  const isPrivateRoute = !!session?.user;
+  const searchQuery = searchParams.q?.toLowerCase();
 
-      {/* Featured Courses Section */}
-      <div className="max-w-7xl mx-auto mb-16">
-        <h2 className="text-2xl font-semibold mb-8 text-white">Featured Courses</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {featuredCourses.map((course) => (
-            <CourseCard key={course.title} course={course} />
-          ))}
-        </div>
-      </div>
+  // Filter courses based on search query
+  const filteredFeaturedCourses = searchQuery
+    ? featuredCourses.filter(course =>
+        course.title.toLowerCase().includes(searchQuery) ||
+        course.category.toLowerCase().includes(searchQuery) ||
+        course.level.toLowerCase().includes(searchQuery)
+      )
+    : featuredCourses;
 
-      {/* Popular Courses Section */}
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl font-semibold mb-8 text-white">Popular Courses</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {popularCourses.map((course) => (
-            <CourseCard key={course.title} course={course} showRating={true} />
-          ))}
+  const filteredCategories = searchQuery
+    ? categories.filter(category =>
+        category.title.toLowerCase().includes(searchQuery) ||
+        category.description.toLowerCase().includes(searchQuery)
+      )
+    : categories;
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Search Bar for Private Routes */}
+      {isPrivateRoute && (
+        <div className="fixed top-4 right-8 z-50 w-96">
+          <SearchBar variant="standalone" />
         </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Hero Section */}
+        <div className="max-w-7xl mx-auto mb-16">
+          <h1 className="text-4xl font-bold mb-4">Explore Courses</h1>
+          <p className="text-gray-400 text-lg">Discover new skills and expand your knowledge</p>
+        </div>
+
+        {searchQuery ? (
+          <>
+            {/* Categories Section */}
+            <div className="mb-16">
+              <h2 className="text-3xl font-bold mb-8">Browse Categories</h2>
+              {filteredCategories.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {filteredCategories.map((category, index) => (
+                    <CategoryCard key={index} category={category} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">No categories found matching your search.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Featured Courses */}
+            <div>
+              <h2 className="text-3xl font-bold mb-8">Featured Courses</h2>
+              {filteredFeaturedCourses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredFeaturedCourses.map((course, index) => (
+                    <CourseCard key={index} course={course} showRating />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">No courses found matching your search.</p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Categories Section */}
+            <div className="mb-16">
+              <h2 className="text-3xl font-bold mb-8">Browse Categories</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {categories.map((category, index) => (
+                  <CategoryCard key={index} category={category} />
+                ))}
+              </div>
+            </div>
+
+            {/* Featured Courses */}
+            <div className="mb-16">
+              <h2 className="text-3xl font-bold mb-8">Featured Courses</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredCourses.map((course, index) => (
+                  <CourseCard key={index} course={course} showRating />
+                ))}
+              </div>
+            </div>
+
+            {/* Popular Courses */}
+            <div>
+              <h2 className="text-3xl font-bold mb-8">Popular Courses</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {popularCourses.map((course, index) => (
+                  <CourseCard key={index} course={course} showRating />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { IconBrandGithub, IconBrandGoogle } from "@tabler/icons-react";
+import { SearchBar } from "../SearchBar";
 
 const Navbar = async () => {
   const session = await getSession();
@@ -87,16 +88,7 @@ const Navbar = async () => {
             
             {/* Search Bar - Hidden on mobile */}
             <div className="hidden md:block ml-8 flex-1 max-w-2xl">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search topics, courses, or skills..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-md bg-gray-900 text-gray-300 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
-                />
-              </div>
+              <SearchBar />
             </div>
           </div>
 
@@ -113,15 +105,8 @@ const Navbar = async () => {
                   <SheetTitle className="text-white">Menu</SheetTitle>
                 </SheetHeader>
                 {/* Mobile Search */}
-                <div className="mt-4 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-md bg-gray-900 text-gray-300 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
+                <div className="mt-4">
+                  <SearchBar />
                 </div>
                 <div className="mt-6">
                   <ul className="space-y-4">
