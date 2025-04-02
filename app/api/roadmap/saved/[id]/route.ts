@@ -43,14 +43,15 @@ const validateEdge = (edge: any): boolean => {
 };
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  console.log("[GET_SAVED_ROADMAP] Starting request for roadmap ID:", params.id);
+  // Destructure id at the beginning
+  const { id } = params;
+  console.log("[GET_SAVED_ROADMAP] Starting request for roadmap ID:", id);
   
   try {
     // Connect to the database first
     await connectDB();
     
-    // Validate ID
-    const id = params.id;
+    // Validate ID - Already destructured
     if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
       console.log("[GET_SAVED_ROADMAP] Invalid roadmap ID:", id);
       return new NextResponse(JSON.stringify({ error: "Invalid roadmap ID" }), { 
@@ -99,14 +100,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  console.log("[UPDATE_SAVED_ROADMAP] Starting update for roadmap ID:", params.id);
+  // Destructure id at the beginning
+  const { id } = params;
+  console.log("[UPDATE_SAVED_ROADMAP] Starting update for roadmap ID:", id);
   
   try {
     // Connect to the database first
     await connectDB();
     
-    // Validate ID
-    const id = params.id;
+    // Validate ID - Already destructured
     if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
       console.log("[UPDATE_SAVED_ROADMAP] Invalid roadmap ID:", id);
       return new NextResponse(JSON.stringify({ error: "Invalid roadmap ID" }), { 
@@ -243,14 +245,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  console.log("[DELETE_SAVED_ROADMAP] Starting delete for roadmap ID:", params.id);
+  // Destructure id at the beginning
+  const { id } = params;
+  console.log("[DELETE_SAVED_ROADMAP] Starting delete for roadmap ID:", id);
   
   try {
     // Connect to the database first
     await connectDB();
     
-    // Validate ID
-    const id = params.id;
+    // Validate ID - Already destructured
     if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
       console.log("[DELETE_SAVED_ROADMAP] Invalid roadmap ID:", id);
       return new NextResponse(JSON.stringify({ error: "Invalid roadmap ID" }), { 

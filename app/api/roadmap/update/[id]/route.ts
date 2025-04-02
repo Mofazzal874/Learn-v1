@@ -16,10 +16,10 @@ export async function PUT(
     await connectDB();
 
     const { nodes, edges } = await req.json();
-    const roadmapId = params.id;
+    const { id } = params;
 
     const roadmap = await Roadmap.findOneAndUpdate(
-      { _id: roadmapId, userId: session.user.id },
+      { _id: id, userId: session.user.id },
       { $set: { nodes, edges } },
       { new: true }
     );

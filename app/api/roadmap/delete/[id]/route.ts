@@ -15,9 +15,10 @@ export async function DELETE(
 
     await connectDB();
 
-    const roadmapId = params.id;
+    const { id } = params;
+    
     const roadmap = await Roadmap.findOneAndDelete({
-      _id: roadmapId,
+      _id: id,
       userId: session.user.id,
     });
 

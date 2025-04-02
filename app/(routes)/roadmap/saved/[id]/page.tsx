@@ -27,8 +27,11 @@ export default function SavedRoadmapPage({ params }: { params: { id: string } })
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
+  // Destructure id from params properly
+  const { id } = params;
+  
   // Store the id to prevent dependency issues
-  const roadmapId = useMemo(() => params.id, [params.id]);
+  const roadmapId = useMemo(() => id, [id]);
 
   // Fetch roadmap only once when component mounts or ID changes
   useEffect(() => {

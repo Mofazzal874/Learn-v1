@@ -138,7 +138,7 @@ export default function CreateRoadmap() {
         edgeCount: sanitizedEdges.length 
       });
       
-      const response = await fetch("/api/roadmap/save", {
+      const response = await fetch("/api/roadmap/saved", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,6 +156,9 @@ export default function CreateRoadmap() {
         throw new Error(errorData.error || "Failed to save roadmap");
       }
 
+      const result = await response.json();
+      console.log("Save successful, got result:", result);
+      
       toast.success("Roadmap saved successfully");
       router.push("/roadmap/saved");
     } catch (error) {
