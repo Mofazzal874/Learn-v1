@@ -222,7 +222,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     }
   };
 
-  // Handle node drag stop
+  // Modify the onNodeDragStopHandler to maintain tree structure
   const onNodeDragStopHandler = useCallback(
     (event: React.MouseEvent, node: Node<any, any>) => {
       if (readOnly) return;
@@ -341,7 +341,6 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           elementsSelectable={!readOnly}
         >
           <Controls className="bottom-4 right-4" />
-          <MiniMap className="bottom-4 right-16" />
           <Background />
           <Panel position="top-left" className="bg-[#141414] text-white p-2 rounded shadow-lg">
             <div className="text-sm">
