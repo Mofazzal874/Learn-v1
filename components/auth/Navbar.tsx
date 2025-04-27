@@ -27,8 +27,7 @@ const Navbar = async () => {
         </Link>
       </li>
 
-      {!user ? (
-        <>
+      
           <li>
             <Link 
               href="/login" 
@@ -45,29 +44,7 @@ const Navbar = async () => {
               Sign up
             </Link>
           </li>
-        </>
-      ) : (
-        <>
-          <li>
-            <Link href="/private/dashboard" className="flex items-center space-x-1 hover:text-blue-400 transition-colors">
-              <BookOpen className="w-4 h-4" />
-              <span>My Learning</span>
-            </Link>
-          </li>
-          <li>
-            <form
-              action={async () => {
-                "use server";
-                await signOut();
-              }}
-            >
-              <Button type="submit" variant="ghost" className="text-gray-200 hover:text-white hover:bg-transparent">
-                Sign out
-              </Button>
-            </form>
-          </li>
-        </>
-      )}
+      
     </>
   );
 

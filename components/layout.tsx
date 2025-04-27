@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/getSession";
 import { ClientLayout } from "./ClientLayout";
 import Navbar from "./auth/Navbar";
+import Footer from "./Footer";
 
 export default async function RootLayout({
   children,
@@ -10,18 +11,19 @@ export default async function RootLayout({
   const session = await getSession();
   const user = session?.user;
 
-  // If no user is logged in, show the public navbar and content
+  // For unauthorized users (public pages)
   if (!user) {
     return (
-      <>
+      <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="">
+        <main className="flex-grow">
           {children}
-        </div>
-      </>
+        </main>
+        <Footer />
+      </div>
     );
   }
 
-  // For logged-in users on private routes, show the client layout
+  // For authorized users (private pages)
   return <ClientLayout>{children}</ClientLayout>;
 }
