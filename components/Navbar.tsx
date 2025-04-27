@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "../ui/button";
+import { Button } from "./ui/button";
 import { getSession } from "@/lib/getSession";
 import { signOut } from "@/auth";
 import { Menu, Search, Compass, BookOpen } from "lucide-react";
@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { IconBrandGithub, IconBrandGoogle } from "@tabler/icons-react";
-import { SearchBar } from "../SearchBar";
+import { SearchBar } from "./SearchBar";
 
 const Navbar = async () => {
   const session = await getSession();

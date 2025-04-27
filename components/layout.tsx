@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/getSession";
 import { ClientLayout } from "./ClientLayout";
-import Navbar from "./auth/Navbar";
+import Navbar from "./Navbar";
 import Footer from "./Footer";
 
 export default async function RootLayout({
