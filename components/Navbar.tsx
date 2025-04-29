@@ -30,7 +30,7 @@ const Navbar = async () => {
       
           <li>
             <Link 
-              href="/login" 
+              href="/role-select?mode=login" 
               className="px-4 py-2 text-sm font-medium text-gray-200 hover:text-white transition-colors"
             >
               Sign in
@@ -38,7 +38,7 @@ const Navbar = async () => {
           </li>
           <li>
             <Link 
-              href="/register" 
+              href="/role-select?mode=register" 
               className="px-4 py-2 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
             >
               Sign up

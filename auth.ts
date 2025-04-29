@@ -24,14 +24,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" },
       },
 
       authorize: async (credentials) => {
         const email = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
+        const role = credentials?.role as string | undefined;
 
         if (!email || !password) {
-          throw new CredentialsSignin("Please provide both email & password");
+          throw new Error("Please provide both email and password");
         }
 
         await connectDB();
@@ -39,7 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await User.findOne({ email }).select("+password +role");
 
         if (!user) {
-          throw new Error("Invalid email or password");
+          throw new Error(`No account found with this email${role ? ` as a ${role}` : ''}`);
         }
 
         if (!user.password) {
@@ -49,7 +51,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const isMatched = await compare(password, user.password);
 
         if (!isMatched) {
-          throw new Error("Password did not matched");
+          throw new Error("Password did not match");
+        }
+
+        // Verify role matches if provided during login
+        if (role && user.role !== role) {
+          throw new Error(`This account is registered as a ${user.role}. Please use the correct login option.`);
         }
 
         const userData = {
