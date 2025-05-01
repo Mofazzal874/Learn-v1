@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { login } from "@/app/actions/auth";
@@ -17,10 +17,11 @@ export default function LoginPage() {
   const role = searchParams.get('role');
 
   // Redirect to role select if no role is specified
-  if (!role) {
-    router.push('/role-select?mode=login');
-    return null;
-  }
+  useEffect(() => {
+    if (!role) {
+      router.push('/role-select?mode=login');
+    }
+  }, [role, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

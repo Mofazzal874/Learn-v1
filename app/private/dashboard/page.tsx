@@ -9,10 +9,8 @@ import {
 } from "@/components/ui/table";
 import { getSession } from "@/lib/getSession";
 import { redirect } from "next/navigation";
-import { BookOpen, Brain, LogOut, Target, Trophy, User } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { signOut } from "@/auth";
+import { BookOpen, Brain, Target, Trophy} from "lucide-react";
+
 
 const Dashboard = async () => {
   const session = await getSession();
@@ -22,31 +20,7 @@ const Dashboard = async () => {
   return (
     <div className="flex min-h-screen">
       <div className="flex-1 bg-[#0a0a0a]">
-        {/* Profile and Sign Out Buttons */}
-        <div className="absolute top-4 right-8 flex items-center gap-3">
-          <Link
-            href="/private/profile"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#141414] text-gray-300 hover:text-white hover:bg-gray-800 transition-all"
-          >
-            <User className="h-4 w-4" />
-            <span>{user.firstName}</span>
-          </Link>
-          <form
-            action={async () => {
-              "use server";
-              await signOut();
-            }}
-          >
-            <Button 
-              type="submit"
-              variant="ghost" 
-              className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
-            </Button>
-          </form>
-        </div>
+        
 
         <div className="p-8">
           {/* Welcome Section */}

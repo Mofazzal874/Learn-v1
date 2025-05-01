@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Button } from "@/components/ui/button";
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import { usePathname } from 'next/navigation';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,10 @@ interface ClientLayoutProps {
 
 export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const pathname = usePathname();
+  
+  // Determine role based on URL path
+  const role = pathname.startsWith('/tutor') ? 'tutor' : 'user';
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -27,7 +32,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
             <SheetHeader className="px-4 py-2 text-white">
               <SheetTitle className="text-white">Navigation Menu</SheetTitle>
             </SheetHeader>
-            <Sidebar />
+            <Sidebar role={role} />
           </SheetContent>
         </Sheet>
       </div>
@@ -41,7 +46,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
           ${isHovered ? 'w-64' : 'w-20'}`}
       >
         <div className={`transition-all duration-300 ease-in-out ${isHovered ? 'w-64' : 'w-20'}`}>
-          <Sidebar compact={!isHovered} />
+          <Sidebar compact={!isHovered} role={role} />
         </div>
       </div>
 

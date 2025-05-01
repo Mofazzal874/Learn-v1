@@ -185,6 +185,7 @@ export default function SavedRoadmapPage({ params }: { params: { id: string } })
             size="icon"
             onClick={() => router.push("/roadmap/saved")}
             className="mr-4"
+            style={{ backgroundColor: "#161616" }}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

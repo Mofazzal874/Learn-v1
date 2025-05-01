@@ -85,7 +85,6 @@ export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialo
           <div className="flex justify-end space-x-2">
             <Button
               type="button"
-              variant="outline"
               onClick={() => setOpen(false)}
               className="text-white border-white/10 hover:bg-white/10"
             >
