@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Loader2, ArrowLeft, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RoadmapCanvas from "@/components/RoadmapCanvas";
@@ -18,7 +18,7 @@ interface SavedRoadmap {
   updatedAt: string;
 }
 
-export default function SavedRoadmapPage({ params }: { params: { id: string } }) {
+export default function SavedRoadmapPage() {
   const [roadmap, setRoadmap] = useState<SavedRoadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<RoadmapNode[]>([]);
@@ -26,12 +26,10 @@ export default function SavedRoadmapPage({ params }: { params: { id: string } })
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+  const params = useParams();
 
-  // Destructure id from params properly
-  const { id } = params;
-  
   // Store the id to prevent dependency issues
-  const roadmapId = useMemo(() => id, [id]);
+  const roadmapId = useMemo(() => params?.id as string, [params?.id]);
 
   // Fetch roadmap only once when component mounts or ID changes
   useEffect(() => {
@@ -181,11 +179,9 @@ export default function SavedRoadmapPage({ params }: { params: { id: string } })
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div className="flex items-center">
           <Button
-            variant="outline"
             size="icon"
             onClick={() => router.push("/roadmap/saved")}
             className="mr-4"
-            style={{ backgroundColor: "#161616" }}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -231,4 +227,4 @@ export default function SavedRoadmapPage({ params }: { params: { id: string } })
       </div>
     </div>
   );
-} 
+}

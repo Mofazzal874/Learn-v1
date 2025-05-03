@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Code, Brain, ChartBar, Atom, Globe, Database, Shield, Star, Layout, LineChart, Rocket, Server, Smartphone } from "lucide-react";
+import { Card, CardContent} from "@/components/ui/card";
+import { BookOpen, Code, Brain, ChartBar, Atom, Globe, Database, Shield, Star} from "lucide-react";
 import Link from "next/link";
 import { getSession } from "@/lib/getSession";
 import { SearchBar } from "@/components/SearchBar";
