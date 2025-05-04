@@ -1,21 +1,66 @@
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { publishCourse } from "@/app/actions/course";
-import { NextResponse } from "next/server";
+import connectDB from "@/lib/db";
+import { Course } from "@/models/Course";
+import mongoose from "mongoose";
 
-export async function POST(
-  request: Request,
+export async function PATCH(
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verify authentication
     const session = await auth();
-    if (!session || session.user.role !== "tutor") {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await publishCourse(params.id);
-    return new NextResponse(null, { status: 200 });
+    await connectDB();
+
+    const courseId = params.id;
+    
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return NextResponse.json({ error: "Invalid course ID" }, { status: 400 });
+    }
+
+    // Find the course
+    const course = await Course.findById(courseId);
+    
+    if (!course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (course.tutorId.toString() !== session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Validate course before publishing
+    if (!course.title || !course.description || !course.thumbnail) {
+      return NextResponse.json(
+        { error: "Course is incomplete. Please add a title, description, and thumbnail." }, 
+        { status: 400 }
+      );
+    }
+
+    if (course.sections.length === 0) {
+      return NextResponse.json(
+        { error: "Course must have at least one section with content before publishing." },
+        { status: 400 }
+      );
+    }
+
+    // Update course status
+    course.published = true;
+    await course.save();
+
+    return NextResponse.json({ success: true, published: true });
   } catch (error) {
-    console.error("Error publishing course:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[PUBLISH_COURSE_ERROR]", error);
+    return NextResponse.json(
+      { error: "Failed to publish course" },
+      { status: 500 }
+    );
   }
 }

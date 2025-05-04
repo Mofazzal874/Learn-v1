@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const session = await auth();
@@ -17,7 +17,9 @@ export async function GET(
 
     await connectDB();
 
-    const { id } = params;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const { id } = resolvedParams;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -47,7 +49,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const session = await auth();
@@ -57,7 +59,9 @@ export async function PUT(
 
     await connectDB();
 
-    const { id } = params;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const { id } = resolvedParams;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -162,7 +166,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const session = await auth();
@@ -172,7 +176,9 @@ export async function DELETE(
 
     await connectDB();
 
-    const { id } = params;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const { id } = resolvedParams;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -11,12 +11,13 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-// Fix connection string issues by trimming quotes
+// Fix connection string issues by handling multiple environment variable locations
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
 if (!MONGODB_URI) {
+  console.error("Missing MongoDB connection string. Please check your environment variables.");
   throw new Error(
-    "Please define the MONGODB_URI or MONGO_URI environment variable inside .env.local"
+    "Please define the MONGODB_URI or MONGO_URI environment variable inside .env.local or .env"
   );
 }
 

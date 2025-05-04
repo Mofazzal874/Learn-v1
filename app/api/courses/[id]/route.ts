@@ -4,7 +4,7 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 
-export async function PATCH(
+export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -25,26 +25,22 @@ export async function PATCH(
     }
 
     // Find the course
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(courseId).lean();
     
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // Verify ownership
+    // Verify that the course belongs to the authenticated tutor
     if (course.tutorId.toString() !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Update course status to unpublish
-    course.published = false;
-    await course.save();
-
-    return NextResponse.json({ success: true, published: false });
+    return NextResponse.json(course);
   } catch (error) {
-    console.error("[UNPUBLISH_COURSE_ERROR]", error);
+    console.error("[GET_COURSE_ERROR]", error);
     return NextResponse.json(
-      { error: "Failed to unpublish course" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

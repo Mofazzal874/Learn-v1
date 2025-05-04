@@ -1,3 +1,5 @@
+"use client";
+
 import { auth } from "@/auth";
 import { Course } from "@/models/Course";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import { Plus, GripVertical, X } from "lucide-react";
 import connectDB from "@/lib/db";
 import { updateCourse } from "@/app/actions/course";
 import { useState } from "react";
+import { use } from "react";
 
 const categories = [
   "Programming",
@@ -36,7 +39,7 @@ const categories = [
 ];
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 async function getCourse(id: string) {
@@ -50,7 +53,8 @@ export default async function EditCourse({ params }: Props) {
   const session = await auth();
   if (!session) return null;
 
-  const course = await getCourse(params.id);
+  const { id } = use(params);
+  const course = await getCourse(id);
 
   return (
     <div className="flex h-screen bg-[#0a0a0a]">
@@ -66,7 +70,7 @@ export default async function EditCourse({ params }: Props) {
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <form action={async (formData) => { await updateCourse(params.id, formData); }}>
+              <form action={async (formData) => { await updateCourse(id, formData); }}>
                 <Card className="bg-[#141414] border-gray-800 p-6">
                   <div className="space-y-8">
                     <div className="space-y-6">
@@ -208,7 +212,7 @@ export default async function EditCourse({ params }: Props) {
                     className="w-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
                     asChild
                   >
-                    <a href={`/tutor/courses/${params.id}/content`}>
+                    <a href={`/tutor/courses/${id}/content`}>
                       <Plus className="w-4 h-4 mr-2" />
                       Manage Content
                     </a>
@@ -222,7 +226,7 @@ export default async function EditCourse({ params }: Props) {
                 </h3>
                 <div className="space-y-4">
                   {course.published ? (
-                    <form action={`/api/courses/${params.id}/unpublish`}>
+                    <form action={`/api/courses/${id}/unpublish`}>
                       <Button
                         type="submit"
                         className="w-full bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
@@ -231,7 +235,7 @@ export default async function EditCourse({ params }: Props) {
                       </Button>
                     </form>
                   ) : (
-                    <form action={`/api/courses/${params.id}/publish`}>
+                    <form action={`/api/courses/${id}/publish`}>
                       <Button
                         type="submit"
                         className="w-full bg-green-500/10 text-green-500 hover:bg-green-500/20"
@@ -241,7 +245,7 @@ export default async function EditCourse({ params }: Props) {
                     </form>
                   )}
                   
-                  <form action={`/api/courses/${params.id}/delete`}>
+                  <form action={`/api/courses/${id}/delete`}>
                     <Button
                       type="submit"
                       className="w-full bg-red-500/10 text-red-500 hover:bg-red-500/20"
