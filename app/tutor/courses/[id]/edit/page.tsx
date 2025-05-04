@@ -141,7 +141,7 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
           basePrice: data.price?.toString() || '0',
           hasDiscount: !!data.discountedPrice,
           discountPrice: data.discountedPrice?.toString() || '',
-          discountEnds: data.discountEnds ? new Date(data.discountEnds).toISOString().split('T')[0] : '',
+          discountEnds: data.discountEnds ? new Date(data.discountEnds).toISOString().slice(0, 16) : '',
           isFree: data.isFree || false,
         });
         
