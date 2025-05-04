@@ -1,10 +1,26 @@
 import mongoose, { Schema } from "mongoose";
 
+// Cloudinary asset schema for storing media files
+const cloudinaryAssetSchema = new Schema({
+  public_id: { type: String, required: true },
+  secure_url: { type: String, required: true },
+  resource_type: { type: String, enum: ['image', 'video', 'raw'], required: true },
+  format: { type: String },
+  width: { type: Number },
+  height: { type: Number },
+  duration: { type: Number }, // for videos, in seconds
+  bytes: { type: Number },
+  created_at: { type: Date },
+});
+
 const lessonSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String },
-  videoUrl: { type: String },
-  duration: { type: Number }, // in minutes
+  duration: { type: String }, // "30 mins", "1 hour", etc.
+  videoLink: { type: String },
+  videoAsset: cloudinaryAssetSchema,
+  assignmentLink: { type: String },
+  assignmentDescription: { type: String },
   resources: [{
     title: { type: String },
     url: { type: String },
@@ -27,16 +43,22 @@ const sectionSchema = new Schema({
 
 const courseSchema = new Schema({
   title: { type: String, required: true },
+  subtitle: { type: String },
   slug: { type: String, required: true, unique: true },
   description: { type: String, required: true },
   tutorId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
-  thumbnail: { type: String },
-  previewVideo: { type: String },
-  price: { type: Number, required: true },
+  thumbnail: { type: String }, // URL to the thumbnail
+  thumbnailAsset: cloudinaryAssetSchema, // Cloudinary asset info for the thumbnail
+  previewVideo: { type: String }, // URL to the preview video
+  previewVideoAsset: cloudinaryAssetSchema, // Cloudinary asset info for the preview video
+  price: { type: Number, required: true, default: 0 },
+  isFree: { type: Boolean, default: false },
   discountedPrice: { type: Number },
+  discountEnds: { type: Date },
   category: { type: String, required: true },
   subcategory: { type: String },
   level: { type: String, enum: ['beginner', 'intermediate', 'advanced'], required: true },
+  certificate: { type: Boolean, default: false },
   prerequisites: [{ type: String }],
   outcomes: [{ type: String }],
   sections: [sectionSchema],

@@ -5,46 +5,69 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
+import { uploadImage, uploadVideo, CloudinaryUploadResult } from "@/lib/cloudinary";
 
-export async function createCourse(data: {
+export interface CloudinaryAsset {
+  secure_url: string;
+  public_id: string;
+  resource_type: string;
+  format: string;
+  duration?: number;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
+export interface CourseFormData {
   title: string;
+  subtitle: string;
   description: string;
   category: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  thumbnail?: string;
-  previewVideo?: string;
-  price: number;
-  discountedPrice?: number;
-  prerequisites?: string[];
-  outcomes?: string[];
-  requirements?: string[];
-  sections: Array<{
-    title: string;
-    description?: string;
-    order: number;
-    lessons: Array<{
-      title: string;
-      description?: string;
-      videoUrl?: string;
-      duration?: number;
-      resources?: Array<{
-        title: string;
-        url: string;
-        type: 'pdf' | 'link' | 'zip' | 'other';
-      }>;
-      quiz?: Array<{
-        question: string;
-        options: string[];
-        correctAnswer: number;
-        explanation?: string;
-      }>;
-    }>;
-  }>;
-  tags?: string[];
-  language?: string;
-  welcomeMessage?: string;
-  completionMessage?: string;
-}): Promise<any> {
+  level: string;
+  thumbnail: string | null; // base64 string from client
+  previewVideo: string | null; // base64 string from client
+  thumbnailAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
+  previewVideoAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
+  certificate: boolean;
+}
+
+export interface SectionData {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  lessons: LessonData[];
+}
+
+export interface LessonData {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  type: 'video' | 'article' | 'resource';
+  videoLink?: string;
+  assignmentLink?: string;
+  assignmentDescription?: string;
+  content?: string;
+}
+
+export interface PricingData {
+  basePrice: string;
+  hasDiscount: boolean;
+  discountPrice: string;
+  discountEnds: string;
+  isFree: boolean;
+}
+
+export async function createCourse({
+  courseData,
+  sections,
+  pricing
+}: {
+  courseData: CourseFormData;
+  sections: SectionData[];
+  pricing: PricingData;
+}): Promise<string> {
   const session = await auth();
   
   if (!session?.user?.id) {
@@ -53,24 +76,130 @@ export async function createCourse(data: {
 
   await connectDB();
 
-  // Generate a slug from the title
-  const slug = data.title.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+  try {
+    // Validate all sections have required fields before continuing
+    if (!sections || sections.length === 0) {
+      throw new Error('At least one course section is required');
+    }
 
-  // Create the course using Mongoose
-  const course = await Course.create({
-    ...data,
-    slug,
-    tutorId: new mongoose.Types.ObjectId(session.user.id),
-    published: false,
-    approved: false,
-    rating: 0,
-    totalStudents: 0,
-    totalReviews: 0
-  });
+    // Validate each section has a title
+    const invalidSections = sections.filter(section => !section.title?.trim());
+    if (invalidSections.length > 0) {
+      throw new Error(`Section ${invalidSections[0].id || 'unknown'} is missing a title`);
+    }
+    
+    // Filter out any empty sections or sections with missing required fields
+    const validSections = sections.filter(section => {
+      // Check that section has title and it's not just whitespace
+      return section.title?.trim();
+    });
 
-  return course;
+    // Set up variables for Cloudinary assets
+    let thumbnailResult: CloudinaryUploadResult | null = null;
+    let previewVideoResult: CloudinaryUploadResult | null = null;
+
+    // Priority 1: Use the direct Cloudinary upload results if available
+    if (courseData.thumbnailAsset) {
+      thumbnailResult = {
+        public_id: courseData.thumbnailAsset.public_id,
+        secure_url: courseData.thumbnailAsset.secure_url,
+        resource_type: courseData.thumbnailAsset.resource_type as 'image' | 'video' | 'raw',
+        format: courseData.thumbnailAsset.format,
+        width: courseData.thumbnailAsset.width,
+        height: courseData.thumbnailAsset.height,
+        bytes: courseData.thumbnailAsset.bytes,
+        created_at: new Date()
+      };
+    }
+    
+    if (courseData.previewVideoAsset) {
+      previewVideoResult = {
+        public_id: courseData.previewVideoAsset.public_id,
+        secure_url: courseData.previewVideoAsset.secure_url,
+        resource_type: courseData.previewVideoAsset.resource_type as 'image' | 'video' | 'raw',
+        format: courseData.previewVideoAsset.format,
+        duration: courseData.previewVideoAsset.duration,
+        bytes: courseData.previewVideoAsset.bytes,
+        width: courseData.previewVideoAsset.width,
+        height: courseData.previewVideoAsset.height,
+        created_at: new Date()
+      };
+    }
+    
+    // Priority 2: Upload files to Cloudinary only if we don't already have assets
+    if (!thumbnailResult && courseData.thumbnail) {
+      thumbnailResult = await uploadImage(courseData.thumbnail, 'courses/thumbnails');
+    }
+
+    if (!previewVideoResult && courseData.previewVideo) {
+      previewVideoResult = await uploadVideo(courseData.previewVideo, 'courses/previews');
+    }
+
+    // Generate a slug from the title
+    const slug = courseData.title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // Prepare pricing data
+    const price = pricing.isFree ? 0 : parseFloat(pricing.basePrice) || 0;
+    const discountedPrice = pricing.hasDiscount ? parseFloat(pricing.discountPrice) || 0 : undefined;
+    const discountEnds = pricing.hasDiscount ? new Date(pricing.discountEnds) : undefined;
+
+    // Process sections and lessons - ensure all have required fields
+    const processedSections = validSections.map((section, index) => {
+      // Ensure each section has a valid description
+      const description = section.description || '';
+      
+      // Filter out lessons with missing titles
+      const validLessons = (section.lessons || []).filter(lesson => lesson.title?.trim());
+      
+      // Process valid lessons
+      const processedLessons = validLessons.map(lesson => ({
+        title: lesson.title.trim(),
+        description: lesson.description || '',
+        duration: lesson.duration || '0:00',
+        type: lesson.type || 'video',
+        videoLink: lesson.videoLink || '',
+        assignmentLink: lesson.assignmentLink || '',
+        assignmentDescription: lesson.assignmentDescription || '',
+      }));
+      
+      return {
+        title: section.title.trim(),
+        description,
+        order: index,
+        lessons: processedLessons
+      };
+    });
+
+    // Create the course using Mongoose
+    const course = await Course.create({
+      title: courseData.title,
+      subtitle: courseData.subtitle || '',
+      slug,
+      description: courseData.description,
+      tutorId: new mongoose.Types.ObjectId(session.user.id),
+      thumbnail: thumbnailResult?.secure_url || '',
+      thumbnailAsset: thumbnailResult,
+      previewVideo: previewVideoResult?.secure_url || '',
+      previewVideoAsset: previewVideoResult,
+      price,
+      isFree: pricing.isFree,
+      discountedPrice,
+      discountEnds,
+      category: courseData.category,
+      level: courseData.level,
+      certificate: courseData.certificate,
+      sections: processedSections,
+      published: false,
+      approved: false
+    });
+
+    return course._id.toString();
+  } catch (error) {
+    console.error("Course creation error:", error);
+    throw new Error(error instanceof Error ? error.message : "Failed to create course");
+  }
 }
 
 export async function publishCourse(courseId: string): Promise<any> {

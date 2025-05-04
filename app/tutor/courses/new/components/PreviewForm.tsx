@@ -1,16 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   BookOpen, 
   Clock, 
-  Star, 
   Users, 
   CheckCircle, 
   PlayCircle,
   FileText,
-  File,
+  Link,
   ArrowRight,
   Loader2
 } from "lucide-react";
@@ -18,13 +18,13 @@ import {
 interface PreviewFormProps {
   courseData: {
     title: string;
+    subtitle: string;
     description: string;
     category: string;
     level: string;
     thumbnail: string | null;
     previewVideo: string | null;
     certificate: boolean;
-    forum: boolean;
     sections: Array<{
       id: string;
       title: string;
@@ -32,8 +32,12 @@ interface PreviewFormProps {
       lessons: Array<{
         id: string;
         title: string;
+        description: string;
         type: 'video' | 'article' | 'resource';
         duration: string;
+        videoLink?: string;
+        assignmentLink?: string;
+        assignmentDescription?: string;
       }>;
     }>;
     pricing: {
@@ -41,18 +45,15 @@ interface PreviewFormProps {
       hasDiscount: boolean;
       discountPrice: string;
       discountEnds: string;
-      installmentEnabled: boolean;
-      installmentCount: string;
-      installmentPrice: string;
+      isFree: boolean;
     };
   };
   onBack: () => void;
   onPublish: () => Promise<void>;
+  isSubmitting: boolean;
 }
 
-export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFormProps) {
-  const [isPublishing, setIsPublishing] = useState(false);
-
+export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting }: PreviewFormProps) {
   const totalLessons = courseData.sections.reduce(
     (total, section) => total + section.lessons.length,
     0
@@ -66,15 +67,6 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
       const minutes = parseInt(duration) || 0;
       return total + minutes;
     }, 0);
-
-  const handlePublish = async () => {
-    setIsPublishing(true);
-    try {
-      await onPublish();
-    } finally {
-      setIsPublishing(false);
-    }
-  };
 
   return (
     <Card className="bg-[#141414] border-gray-800 max-w-4xl mx-auto">
@@ -98,7 +90,7 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
             </div>
           )}
           
-          {courseData.pricing.hasDiscount && (
+          {!courseData.pricing.isFree && courseData.pricing.hasDiscount && (
             <div className="absolute top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-full">
               Save ${((parseFloat(courseData.pricing.basePrice) || 0) - (parseFloat(courseData.pricing.discountPrice) || 0)).toFixed(2)}
             </div>
@@ -108,7 +100,8 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
         {/* Course Info */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="col-span-2">
-            <h1 className="text-2xl font-bold text-white mb-4">{courseData.title}</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">{courseData.title}</h1>
+            <p className="text-lg text-gray-300 mb-4">{courseData.subtitle}</p>
             <p className="text-gray-400 mb-4">{courseData.description}</p>
             
             <div className="flex flex-wrap gap-4 mb-6">
@@ -122,7 +115,7 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
               </div>
               <div className="flex items-center text-gray-400">
                 <Users className="h-4 w-4 mr-2" />
-                <span>All levels</span>
+                <span>{courseData.level}</span>
               </div>
               {courseData.certificate && (
                 <div className="flex items-center text-gray-400">
@@ -156,7 +149,7 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
                               <FileText className="h-4 w-4 text-purple-400" />
                             )}
                             {lesson.type === 'resource' && (
-                              <File className="h-4 w-4 text-green-400" />
+                              <Link className="h-4 w-4 text-green-400" />
                             )}
                             <span className="text-gray-300">{lesson.title}</span>
                           </div>
@@ -175,7 +168,11 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
             <Card className="bg-[#0a0a0a] border-gray-800 sticky top-4">
               <div className="p-6">
                 <div className="mb-6">
-                  {courseData.pricing.hasDiscount ? (
+                  {courseData.pricing.isFree ? (
+                    <div className="text-3xl font-bold text-green-400 mb-2">
+                      Free
+                    </div>
+                  ) : courseData.pricing.hasDiscount ? (
                     <>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-3xl font-bold text-white">
@@ -185,9 +182,11 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
                           ${courseData.pricing.basePrice}
                         </span>
                       </div>
-                      <p className="text-green-400 text-sm">
-                        Limited time offer - Ends {new Date(courseData.pricing.discountEnds).toLocaleDateString()}
-                      </p>
+                      {courseData.pricing.discountEnds && (
+                        <p className="text-green-400 text-sm">
+                          Limited time offer - Ends {new Date(courseData.pricing.discountEnds).toLocaleDateString()}
+                        </p>
+                      )}
                     </>
                   ) : (
                     <div className="text-3xl font-bold text-white mb-2">
@@ -195,12 +194,6 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
                     </div>
                   )}
                 </div>
-
-                {courseData.pricing.installmentEnabled && (
-                  <p className="text-sm text-gray-400 mb-4">
-                    or {courseData.pricing.installmentCount} payments of ${courseData.pricing.installmentPrice}
-                  </p>
-                )}
 
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center text-gray-400">
@@ -217,20 +210,14 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
                       <span>Certificate of completion</span>
                     </div>
                   )}
-                  {courseData.forum && (
-                    <div className="flex items-center text-gray-400">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                      <span>Course discussion forum</span>
-                    </div>
-                  )}
                 </div>
 
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={handlePublish}
-                  disabled={isPublishing}
+                  onClick={onPublish}
+                  disabled={isSubmitting}
                 >
-                  {isPublishing ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Publishing...
@@ -253,11 +240,11 @@ export default function PreviewForm({ courseData, onBack, onPublish }: PreviewFo
             Back
           </Button>
           <Button
-            onClick={handlePublish}
-            disabled={isPublishing}
+            onClick={onPublish}
+            disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isPublishing ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Publishing...

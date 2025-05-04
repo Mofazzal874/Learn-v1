@@ -2,22 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from "@/auth";
 import CurriculumForm from './components/CurriculumForm';
 import PricingForm from './components/PricingForm';
 import PreviewForm from './components/PreviewForm';
 import BasicDetailsForm from './components/BasicDetailsForm';
 import { toast } from 'sonner';
+import { createCourse } from '@/app/actions/course';
 
 interface CourseFormData {
   title: string;
+  subtitle: string;
   description: string;
   category: string;
   level: string;
   thumbnail: File | null;
   previewVideo: File | null;
+  thumbnailAsset?: string;
+  previewVideoAsset?: string;
   certificate: boolean;
-  forum: boolean;
 }
 
 interface Section {
@@ -30,9 +32,13 @@ interface Section {
 interface Lesson {
   id: string;
   title: string;
-  type: 'video' | 'article' | 'resource';
+  description: string;
   duration: string;
-  content: string;
+  type: 'video' | 'article' | 'resource';
+  videoLink?: string;
+  assignmentLink?: string;
+  assignmentDescription?: string;
+  content?: string;
 }
 
 interface PricingData {
@@ -40,9 +46,7 @@ interface PricingData {
   hasDiscount: boolean;
   discountPrice: string;
   discountEnds: string;
-  installmentEnabled: boolean;
-  installmentCount: string;
-  installmentPrice: string;
+  isFree: boolean;
 }
 
 export default function CreateCoursePage() {
@@ -50,13 +54,13 @@ export default function CreateCoursePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [courseData, setCourseData] = useState<CourseFormData>({
     title: '',
+    subtitle: '',
     description: '',
     category: '',
     level: '',
     thumbnail: null,
     previewVideo: null,
     certificate: false,
-    forum: true,
   });
   const [curriculumData, setCurriculumData] = useState<Section[]>([]);
   const [pricingData, setPricingData] = useState<PricingData>({
@@ -64,10 +68,9 @@ export default function CreateCoursePage() {
     hasDiscount: false,
     discountPrice: '',
     discountEnds: '',
-    installmentEnabled: false,
-    installmentCount: '3',
-    installmentPrice: '',
+    isFree: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSaveBasicDetails = (data: CourseFormData) => {
     setCourseData(data);
@@ -84,18 +87,32 @@ export default function CreateCoursePage() {
 
   const handlePublish = async () => {
     try {
-      // TODO: Implement course publishing logic
-      // 1. Upload media files
-      // 2. Create course in database
-      // 3. Create sections and lessons
-      // 4. Set pricing
-      // 5. Publish course
+      setIsSubmitting(true);
       
-      toast.success('Course published successfully!');
-      router.push('/tutor/courses');
+      const courseId = await createCourse({
+        courseData: {
+          ...courseData,
+          // Pass only one of: either the CloudinaryAsset or the File object
+          thumbnail: courseData.thumbnailAsset ? null : courseData.thumbnail,
+          previewVideo: courseData.previewVideoAsset ? null : courseData.previewVideo,
+          // Pass the Cloudinary assets
+          thumbnailAsset: courseData.thumbnailAsset,
+          previewVideoAsset: courseData.previewVideoAsset,
+        },
+        sections: curriculumData.map((section, index) => ({
+          ...section,
+          order: index,
+        })),
+        pricing: pricingData,
+      });
+      
+      toast.success('Course created successfully!');
+      router.push(`/tutor/courses/${courseId}`);
     } catch (error) {
       console.error('Failed to publish course:', error);
-      toast.error('Failed to publish course. Please try again.');
+      toast.error('Failed to create course. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -133,6 +150,7 @@ export default function CreateCoursePage() {
 
         {currentStep === 1 && (
           <CurriculumForm
+            initialData={curriculumData}
             onSave={handleSaveCurriculum}
             onBack={() => setCurrentStep(0)}
             onNext={() => setCurrentStep(2)}
@@ -160,6 +178,7 @@ export default function CreateCoursePage() {
             }}
             onBack={() => setCurrentStep(2)}
             onPublish={handlePublish}
+            isSubmitting={isSubmitting}
           />
         )}
       </div>

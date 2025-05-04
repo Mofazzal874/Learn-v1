@@ -13,9 +13,7 @@ interface PricingData {
   hasDiscount: boolean;
   discountPrice: string;
   discountEnds: string;
-  installmentEnabled: boolean;
-  installmentCount: string;
-  installmentPrice: string;
+  isFree: boolean;
 }
 
 interface PricingFormProps {
@@ -31,9 +29,7 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
     hasDiscount: false,
     discountPrice: '',
     discountEnds: '',
-    installmentEnabled: false,
-    installmentCount: '3',
-    installmentPrice: '',
+    isFree: false,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -42,11 +38,12 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       
-      // Auto-calculate installment price
-      if (field === 'basePrice' || field === 'installmentCount') {
-        const basePrice = parseFloat(newData.basePrice) || 0;
-        const count = parseInt(newData.installmentCount) || 1;
-        newData.installmentPrice = (basePrice / count).toFixed(2);
+      // If course is marked as free, reset other pricing fields
+      if (field === 'isFree' && value === true) {
+        newData.basePrice = '0';
+        newData.hasDiscount = false;
+        newData.discountPrice = '';
+        newData.discountEnds = '';
       }
 
       return newData;
@@ -72,150 +69,118 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
         </div>
 
         <div className="space-y-8">
-          {/* Base Price */}
-          <div>
-            <Label htmlFor="basePrice" className="text-white">Base Price</Label>
-            <div className="relative mt-2">
-              <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              <Input
-                id="basePrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.basePrice}
-                onChange={(e) => handleInputChange('basePrice', e.target.value)}
-                placeholder="49.99"
-                className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
+          {/* Free Course Option */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-white">Free Course</Label>
+                <p className="text-sm text-gray-400">Offer your course for free</p>
+              </div>
+              <Switch
+                checked={formData.isFree}
+                onCheckedChange={(checked) => handleInputChange('isFree', checked)}
               />
             </div>
           </div>
+
+          {/* Base Price */}
+          {!formData.isFree && (
+            <div>
+              <Label htmlFor="basePrice" className="text-white">Base Price</Label>
+              <div className="relative mt-2">
+                <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                <Input
+                  id="basePrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.basePrice}
+                  onChange={(e) => handleInputChange('basePrice', e.target.value)}
+                  placeholder="49.99"
+                  className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Discount Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-white">Enable Discount</Label>
-                <p className="text-sm text-gray-400">Offer a limited-time discount</p>
+          {!formData.isFree && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-white">Enable Discount</Label>
+                  <p className="text-sm text-gray-400">Offer a limited-time discount</p>
+                </div>
+                <Switch
+                  checked={formData.hasDiscount}
+                  onCheckedChange={(checked) => handleInputChange('hasDiscount', checked)}
+                />
               </div>
-              <Switch
-                checked={formData.hasDiscount}
-                onCheckedChange={(checked) => handleInputChange('hasDiscount', checked)}
-              />
+
+              {formData.hasDiscount && (
+                <div className="space-y-4 pl-4 border-l-2 border-gray-800">
+                  <div>
+                    <Label htmlFor="discountPrice" className="text-white">Discounted Price</Label>
+                    <div className="relative mt-2">
+                      <Gift className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="discountPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.discountPrice}
+                        onChange={(e) => handleInputChange('discountPrice', e.target.value)}
+                        placeholder="39.99"
+                        className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="discountEnds" className="text-white">Discount Ends</Label>
+                    <div className="relative mt-2">
+                      <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="discountEnds"
+                        type="datetime-local"
+                        value={formData.discountEnds}
+                        onChange={(e) => handleInputChange('discountEnds', e.target.value)}
+                        className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {formData.hasDiscount && (
-              <div className="space-y-4 pl-4 border-l-2 border-gray-800">
-                <div>
-                  <Label htmlFor="discountPrice" className="text-white">Discounted Price</Label>
-                  <div className="relative mt-2">
-                    <Gift className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="discountPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.discountPrice}
-                      onChange={(e) => handleInputChange('discountPrice', e.target.value)}
-                      placeholder="39.99"
-                      className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="discountEnds" className="text-white">Discount Ends</Label>
-                  <div className="relative mt-2">
-                    <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="discountEnds"
-                      type="datetime-local"
-                      value={formData.discountEnds}
-                      onChange={(e) => handleInputChange('discountEnds', e.target.value)}
-                      className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Installment Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-white">Enable Installment Payments</Label>
-                <p className="text-sm text-gray-400">Allow students to pay in installments</p>
-              </div>
-              <Switch
-                checked={formData.installmentEnabled}
-                onCheckedChange={(checked) => handleInputChange('installmentEnabled', checked)}
-              />
-            </div>
-
-            {formData.installmentEnabled && (
-              <div className="space-y-4 pl-4 border-l-2 border-gray-800">
-                <div>
-                  <Label htmlFor="installmentCount" className="text-white">Number of Installments</Label>
-                  <Input
-                    id="installmentCount"
-                    type="number"
-                    min="2"
-                    max="12"
-                    value={formData.installmentCount}
-                    onChange={(e) => handleInputChange('installmentCount', e.target.value)}
-                    className="mt-2 bg-[#0a0a0a] border-gray-800 text-white"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="installmentPrice" className="text-white">Price per Installment</Label>
-                  <div className="relative mt-2">
-                    <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="installmentPrice"
-                      value={formData.installmentPrice}
-                      readOnly
-                      className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Price Preview */}
-        <div className="mt-8 p-4 bg-[#0a0a0a] border border-gray-800 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">Price Preview</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Base Price</span>
-              <span className="text-white">${formData.basePrice || '0.00'}</span>
-            </div>
-            {formData.hasDiscount && (
-              <>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Discounted Price</span>
-                  <span className="text-green-400">${formData.discountPrice || '0.00'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Savings</span>
-                  <span className="text-green-400">
-                    ${((parseFloat(formData.basePrice) || 0) - (parseFloat(formData.discountPrice) || 0)).toFixed(2)}
-                  </span>
-                </div>
-              </>
-            )}
-            {formData.installmentEnabled && (
+        {!formData.isFree && (
+          <div className="mt-8 p-4 bg-[#0a0a0a] border border-gray-800 rounded-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Price Preview</h3>
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">
-                  {formData.installmentCount} x Installments
-                </span>
-                <span className="text-white">${formData.installmentPrice}</span>
+                <span className="text-gray-400">Base Price</span>
+                <span className="text-white">${formData.basePrice || '0.00'}</span>
               </div>
-            )}
+              {formData.hasDiscount && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Discounted Price</span>
+                    <span className="text-green-400">${formData.discountPrice || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Savings</span>
+                    <span className="text-green-400">
+                      ${((parseFloat(formData.basePrice) || 0) - (parseFloat(formData.discountPrice) || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex justify-between mt-8">
           <Button
