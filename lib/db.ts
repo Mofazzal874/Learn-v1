@@ -21,9 +21,13 @@ if (!MONGODB_URI) {
   );
 }
 
-// Clean the connection string if it has quotes
-const cleanURI = MONGODB_URI.replace(/^['"](.*)['"]$/, '$1');
-console.log("Using MongoDB connection string (sanitized):", cleanURI.replace(/\/\/([^:]+):[^@]+@/, "//***:***@"));
+// Clean the connection string without using recursion-prone replace
+const cleanURI = MONGODB_URI.startsWith("'") || MONGODB_URI.startsWith('"') 
+  ? MONGODB_URI.substring(1, MONGODB_URI.length - 1) 
+  : MONGODB_URI;
+
+// Safe log that doesn't expose credentials
+console.log("Using MongoDB connection string");
 
 let cached = global.mongoose || { conn: null, promise: null };
 

@@ -30,10 +30,10 @@ export default async function CourseContent({ params }: { params: { id: string }
 
   return (
     <div className="flex h-screen bg-[#0a0a0a]">
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full flex">
+      <div className="flex-1 overflow-auto">
+        <div className="h-full flex flex-col md:flex-row">
           {/* Content Structure Sidebar */}
-          <div className="w-80 border-r border-gray-800 bg-[#141414] p-4">
+          <div className="w-full md:w-80 border-r border-gray-800 bg-[#141414] p-4 md:h-screen">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-white">Content</h2>
               <Button size="sm" variant="ghost" className="text-gray-400">
@@ -82,7 +82,7 @@ export default async function CourseContent({ params }: { params: { id: string }
           </div>
 
           {/* Content Editor */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 overflow-y-auto">
             <div className="max-w-3xl mx-auto">
               <div className="mb-8">
                 <h1 className="text-2xl font-bold text-white mb-2">

@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Loader2
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface PreviewFormProps {
   courseData: {
@@ -51,9 +52,12 @@ interface PreviewFormProps {
   onBack: () => void;
   onPublish: () => Promise<void>;
   isSubmitting: boolean;
+  courseId?: string; // Add courseId for existing courses
 }
 
-export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting }: PreviewFormProps) {
+export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting, courseId }: PreviewFormProps) {
+  const [isPublishing, setIsPublishing] = useState(false);
+  
   const totalLessons = courseData.sections.reduce(
     (total, section) => total + section.lessons.length,
     0
@@ -67,6 +71,43 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
       const minutes = parseInt(duration) || 0;
       return total + minutes;
     }, 0);
+    
+  // Separate function to handle the publish action specifically
+  const handlePublish = async () => {
+    if (!courseId) {
+      // For new courses, just use the standard onPublish
+      await onPublish();
+      return;
+    }
+    
+    try {
+      setIsPublishing(true);
+      
+      // Call the publish API endpoint
+      const response = await fetch(`/api/courses/${courseId}/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to publish course');
+      }
+      
+      toast.success('Course published successfully!');
+      
+      // Refresh the page to see updated status
+      window.location.href = `/tutor/courses/${courseId}`;
+    } catch (error: any) {
+      console.error('Publish error:', error);
+      toast.error(error.message || 'Failed to publish course. Please try again.');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   return (
     <Card className="bg-[#141414] border-gray-800 max-w-4xl mx-auto">
@@ -213,19 +254,36 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                 </div>
 
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
                   onClick={onPublish}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Publishing...
+                      Updating...
                     </>
                   ) : (
-                    'Publish Course'
+                    'Update Course'
                   )}
                 </Button>
+                
+                {courseId && (
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    onClick={handlePublish}
+                    disabled={isPublishing}
+                  >
+                    {isPublishing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : (
+                      'Publish Course'
+                    )}
+                  </Button>
+                )}
               </div>
             </Card>
           </div>
@@ -247,11 +305,11 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Publishing...
+                {courseId ? 'Updating...' : 'Creating...'}
               </>
             ) : (
               <>
-                Publish Course
+                {courseId ? 'Update Course' : 'Create Course'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}

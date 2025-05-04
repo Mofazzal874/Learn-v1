@@ -291,29 +291,166 @@ export async function updateCourse(courseId: string, formData: FormData) {
 
     await connectDB();
 
-    // Convert prerequisites and outcomes from newline-separated text to arrays
-    const prerequisites = formData.get("prerequisites")?.toString().split("\n").filter(Boolean) || [];
-    const outcomes = formData.get("outcomes")?.toString().split("\n").filter(Boolean) || [];
-
-    const updatedData = {
-      title: formData.get("title"),
-      category: formData.get("category"),
-      price: parseFloat(formData.get("price")?.toString() || "0"),
-      level: formData.get("level"),
-      description: formData.get("description"),
-      prerequisites,
-      outcomes,
-      updatedAt: new Date()
-    };
-
-    const course = await Course.findOneAndUpdate(
-      { _id: courseId, tutorId: session.user.id },
-      { $set: updatedData },
-      { new: true }
-    );
+    // Find the course and check permission
+    const course = await Course.findOne({ 
+      _id: courseId, 
+      tutorId: session.user.id 
+    });
 
     if (!course) {
       throw new Error("Course not found or you don't have permission to edit it");
+    }
+
+    // Process form data
+    // Basic details
+    const title = formData.get("title")?.toString();
+    const subtitle = formData.get("subtitle")?.toString();
+    const description = formData.get("description")?.toString();
+    const category = formData.get("category")?.toString();
+    const level = formData.get("level")?.toString();
+    const certificate = formData.get("certificate")?.toString() === "true";
+
+    // Handle prerequisites and outcomes if present
+    const prerequisites = formData.get("prerequisites")
+      ? formData.get("prerequisites")?.toString().split("\n").filter(Boolean)
+      : undefined;
+    
+    const outcomes = formData.get("outcomes")
+      ? formData.get("outcomes")?.toString().split("\n").filter(Boolean)
+      : undefined;
+
+    // Check for section data
+    let sections;
+    const sectionsData = formData.get("sections")?.toString();
+    if (sectionsData) {
+      try {
+        const parsedSections = JSON.parse(sectionsData);
+        sections = parsedSections.map((section: any, index: number) => ({
+          title: section.title,
+          description: section.description || '',
+          order: index,
+          lessons: section.lessons.map((lesson: any) => ({
+            title: lesson.title,
+            description: lesson.description || '',
+            duration: lesson.duration || '',
+            type: lesson.type || 'video',
+            videoLink: lesson.videoLink || '',
+            assignmentLink: lesson.assignmentLink || '',
+            assignmentDescription: lesson.assignmentDescription || '',
+          }))
+        }));
+      } catch (error) {
+        console.error("Error parsing sections:", error);
+      }
+    }
+
+    // Check for pricing data
+    let price = course.price;
+    let isFree = course.isFree;
+    let discountedPrice = course.discountedPrice;
+    let discountEnds = course.discountEnds;
+
+    const pricingData = formData.get("pricing")?.toString();
+    if (pricingData) {
+      try {
+        const pricing = JSON.parse(pricingData);
+        isFree = pricing.isFree;
+        price = isFree ? 0 : parseFloat(pricing.basePrice) || 0;
+        
+        if (pricing.hasDiscount) {
+          discountedPrice = parseFloat(pricing.discountPrice) || undefined;
+          discountEnds = pricing.discountEnds ? new Date(pricing.discountEnds) : undefined;
+        } else {
+          discountedPrice = undefined;
+          discountEnds = undefined;
+        }
+      } catch (error) {
+        console.error("Error parsing pricing:", error);
+      }
+    }
+
+    // Handle media assets
+    let thumbnailAsset = course.thumbnailAsset;
+    let previewVideoAsset = course.previewVideoAsset;
+
+    // Check for thumbnailAsset data
+    const thumbnailAssetData = formData.get("thumbnailAsset")?.toString();
+    if (thumbnailAssetData) {
+      try {
+        thumbnailAsset = JSON.parse(thumbnailAssetData);
+      } catch (error) {
+        console.error("Error parsing thumbnailAsset:", error);
+      }
+    }
+
+    // Check for previewVideoAsset data
+    const previewVideoAssetData = formData.get("previewVideoAsset")?.toString();
+    if (previewVideoAssetData) {
+      try {
+        previewVideoAsset = JSON.parse(previewVideoAssetData);
+      } catch (error) {
+        console.error("Error parsing previewVideoAsset:", error);
+      }
+    }
+
+    // Process thumbnail and previewVideo files
+    const thumbnail = formData.get("thumbnail") as File;
+    if (thumbnail && thumbnail.size > 0) {
+      // Handle file upload for thumbnail
+      const base64Image = await fileToBase64(thumbnail);
+      if (base64Image) {
+        const newThumbnailAsset = await uploadImage(base64Image, "courses/thumbnails");
+        thumbnailAsset = newThumbnailAsset;
+      }
+    }
+
+    const previewVideo = formData.get("previewVideo") as File;
+    if (previewVideo && previewVideo.size > 0) {
+      // Handle file upload for preview video
+      const base64Video = await fileToBase64(previewVideo);
+      if (base64Video) {
+        const newVideoAsset = await uploadVideo(base64Video, "courses/previews");
+        previewVideoAsset = newVideoAsset;
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    // Only include fields that are provided
+    if (title) updateData.title = title;
+    if (subtitle !== undefined) updateData.subtitle = subtitle;
+    if (description) updateData.description = description;
+    if (category) updateData.category = category;
+    if (level) updateData.level = level;
+    if (certificate !== undefined) updateData.certificate = certificate;
+    if (prerequisites) updateData.prerequisites = prerequisites;
+    if (outcomes) updateData.outcomes = outcomes;
+    if (sections) updateData.sections = sections;
+    if (price !== undefined) updateData.price = price;
+    if (isFree !== undefined) updateData.isFree = isFree;
+    if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice;
+    if (discountEnds !== undefined) updateData.discountEnds = discountEnds;
+    if (thumbnailAsset) {
+      updateData.thumbnailAsset = thumbnailAsset;
+      updateData.thumbnail = thumbnailAsset.secure_url;
+    }
+    if (previewVideoAsset) {
+      updateData.previewVideoAsset = previewVideoAsset;
+      updateData.previewVideo = previewVideoAsset.secure_url;
+    }
+
+    // Update the course
+    const updatedCourse = await Course.findOneAndUpdate(
+      { _id: courseId, tutorId: session.user.id },
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedCourse) {
+      throw new Error("Failed to update course");
     }
 
     // Revalidate the course pages to reflect changes
@@ -321,9 +458,24 @@ export async function updateCourse(courseId: string, formData: FormData) {
     revalidatePath(`/tutor/courses/${courseId}/edit`);
     revalidatePath('/tutor/courses');
 
-    return { success: true, course };
+    return { success: true, course: updatedCourse };
   } catch (error) {
     console.error("[UPDATE_COURSE_ERROR]", error);
-    throw new Error(error instanceof Error ? error.message : "Failed to update course");
+    throw error; // Just throw the original error to preserve the message
   }
+}
+
+// Helper function to convert File to base64
+async function fileToBase64(file: File): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 }

@@ -4,6 +4,15 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 
+// Add POST method to support form submissions
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Reuse the same logic as PATCH
+  return PATCH(req, { params });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -44,7 +53,7 @@ export async function PATCH(
       );
     }
 
-    if (course.sections.length === 0) {
+    if (!course.sections || course.sections.length === 0) {
       return NextResponse.json(
         { error: "Course must have at least one section with content before publishing." },
         { status: 400 }
@@ -55,7 +64,16 @@ export async function PATCH(
     course.published = true;
     await course.save();
 
-    return NextResponse.json({ success: true, published: true });
+    // Return success JSON response instead of redirecting
+    return NextResponse.json({ 
+      success: true, 
+      published: true,
+      course: {
+        id: course._id,
+        title: course.title,
+        published: course.published
+      }
+    });
   } catch (error) {
     console.error("[PUBLISH_COURSE_ERROR]", error);
     return NextResponse.json(

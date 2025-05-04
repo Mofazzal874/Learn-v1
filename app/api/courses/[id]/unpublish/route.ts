@@ -4,6 +4,15 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 
+// Add POST method to support form submissions
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Reuse the same logic as PATCH
+  return PATCH(req, { params });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -40,7 +49,16 @@ export async function PATCH(
     course.published = false;
     await course.save();
 
-    return NextResponse.json({ success: true, published: false });
+    // Return success JSON response instead of redirecting
+    return NextResponse.json({ 
+      success: true, 
+      published: false,
+      course: {
+        id: course._id,
+        title: course.title,
+        published: course.published
+      }
+    });
   } catch (error) {
     console.error("[UNPUBLISH_COURSE_ERROR]", error);
     return NextResponse.json(
