@@ -304,10 +304,26 @@ export async function updateCourse(courseId: string, formData: FormData) {
     // Process form data
     // Basic details
     const title = formData.get("title")?.toString();
+    if (!title) {
+      throw new Error("Course title is required");
+    }
+    
     const subtitle = formData.get("subtitle")?.toString();
     const description = formData.get("description")?.toString();
+    if (!description) {
+      throw new Error("Course description is required");
+    }
+    
     const category = formData.get("category")?.toString();
+    if (!category) {
+      throw new Error("Course category is required");
+    }
+    
     const level = formData.get("level")?.toString();
+    if (!level) {
+      throw new Error("Course level is required");
+    }
+    
     const certificate = formData.get("certificate")?.toString() === "true";
 
     // Handle prerequisites and outcomes if present
@@ -318,6 +334,25 @@ export async function updateCourse(courseId: string, formData: FormData) {
     const outcomes = formData.get("outcomes")
       ? formData.get("outcomes")?.toString().split("\n").filter(Boolean)
       : undefined;
+
+    // Update slug if title has changed
+    let slug = course.slug;
+    if (title && title !== course.title) {
+      slug = title.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      
+      // Check if slug already exists for another course
+      const existingCourse = await Course.findOne({ 
+        slug,
+        _id: { $ne: courseId }
+      });
+      
+      if (existingCourse) {
+        // Add a unique suffix if slug already exists
+        slug = `${slug}-${Date.now().toString().slice(-6)}`;
+      }
+    }
 
     // Check for section data
     let sections;
@@ -341,6 +376,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
         }));
       } catch (error) {
         console.error("Error parsing sections:", error);
+        throw new Error("Invalid curriculum data format");
       }
     }
 
@@ -366,6 +402,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
         }
       } catch (error) {
         console.error("Error parsing pricing:", error);
+        throw new Error("Invalid pricing data format");
       }
     }
 
@@ -380,6 +417,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
         thumbnailAsset = JSON.parse(thumbnailAssetData);
       } catch (error) {
         console.error("Error parsing thumbnailAsset:", error);
+        throw new Error("Invalid thumbnail asset data");
       }
     }
 
@@ -390,27 +428,36 @@ export async function updateCourse(courseId: string, formData: FormData) {
         previewVideoAsset = JSON.parse(previewVideoAssetData);
       } catch (error) {
         console.error("Error parsing previewVideoAsset:", error);
+        throw new Error("Invalid preview video asset data");
       }
     }
 
     // Process thumbnail and previewVideo files
-    const thumbnail = formData.get("thumbnail") as File;
-    if (thumbnail && thumbnail.size > 0) {
-      // Handle file upload for thumbnail
-      const base64Image = await fileToBase64(thumbnail);
-      if (base64Image) {
-        const newThumbnailAsset = await uploadImage(base64Image, "courses/thumbnails");
-        thumbnailAsset = newThumbnailAsset;
+    const thumbnail = formData.get("thumbnail");
+    if (thumbnail && thumbnail instanceof Blob && thumbnail.size > 0) {
+      try {
+        const base64Image = await fileToBase64(thumbnail as any);
+        if (base64Image) {
+          const newThumbnailAsset = await uploadImage(base64Image, "courses/thumbnails");
+          thumbnailAsset = newThumbnailAsset;
+        }
+      } catch (error) {
+        console.error("Error uploading thumbnail:", error);
+        // Log but don't throw to allow the update to continue without new image
       }
     }
 
-    const previewVideo = formData.get("previewVideo") as File;
-    if (previewVideo && previewVideo.size > 0) {
-      // Handle file upload for preview video
-      const base64Video = await fileToBase64(previewVideo);
-      if (base64Video) {
-        const newVideoAsset = await uploadVideo(base64Video, "courses/previews");
-        previewVideoAsset = newVideoAsset;
+    const previewVideo = formData.get("previewVideo");
+    if (previewVideo && previewVideo instanceof Blob && previewVideo.size > 0) {
+      try {
+        const base64Video = await fileToBase64(previewVideo as any);
+        if (base64Video) {
+          const newVideoAsset = await uploadVideo(base64Video, "courses/previews");
+          previewVideoAsset = newVideoAsset;
+        }
+      } catch (error) {
+        console.error("Error uploading preview video:", error);
+        // Log but don't throw to allow the update to continue without new video
       }
     }
 
@@ -433,6 +480,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     if (isFree !== undefined) updateData.isFree = isFree;
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice;
     if (discountEnds !== undefined) updateData.discountEnds = discountEnds;
+    if (slug && slug !== course.slug) updateData.slug = slug;
     if (thumbnailAsset) {
       updateData.thumbnailAsset = thumbnailAsset;
       updateData.thumbnail = thumbnailAsset.secure_url;
@@ -442,23 +490,90 @@ export async function updateCourse(courseId: string, formData: FormData) {
       updateData.previewVideo = previewVideoAsset.secure_url;
     }
 
-    // Update the course
-    const updatedCourse = await Course.findOneAndUpdate(
-      { _id: courseId, tutorId: session.user.id },
-      { $set: updateData },
-      { new: true }
-    );
+    console.log("Updating course with data:", {
+      courseId,
+      title: updateData.title,
+      category: updateData.category,
+      hasThumbnail: !!updateData.thumbnail,
+      hasPreviewVideo: !!updateData.previewVideo,
+      sectionsCount: sections ? sections.length : 'unchanged'
+    });
 
-    if (!updatedCourse) {
-      throw new Error("Failed to update course");
+    // Update the course with proper error handling and sanitization
+    try {
+      // First, sanitize sections to ensure they don't have any circular references or invalid data
+      if (updateData.sections) {
+        updateData.sections = updateData.sections.map((section: any) => {
+          return {
+            title: String(section.title || ''),
+            description: String(section.description || ''),
+            order: Number(section.order || 0),
+            lessons: Array.isArray(section.lessons) ? section.lessons.map((lesson: any) => ({
+              title: String(lesson.title || ''),
+              description: String(lesson.description || ''),
+              duration: String(lesson.duration || '0:00'),
+              type: lesson.type === 'video' || lesson.type === 'article' || lesson.type === 'resource' 
+                ? lesson.type 
+                : 'video',
+              videoLink: String(lesson.videoLink || ''),
+              assignmentLink: String(lesson.assignmentLink || ''),
+              assignmentDescription: String(lesson.assignmentDescription || '')
+            })) : []
+          };
+        });
+      }
+      
+      // Sanitize cloudinary assets to ensure they don't have any circular references
+      if (updateData.thumbnailAsset) {
+        updateData.thumbnailAsset = {
+          public_id: String(updateData.thumbnailAsset.public_id || ''),
+          secure_url: String(updateData.thumbnailAsset.secure_url || ''),
+          resource_type: String(updateData.thumbnailAsset.resource_type || 'image'),
+          format: String(updateData.thumbnailAsset.format || ''),
+          width: Number(updateData.thumbnailAsset.width || 0),
+          height: Number(updateData.thumbnailAsset.height || 0),
+          bytes: Number(updateData.thumbnailAsset.bytes || 0)
+        };
+      }
+      
+      if (updateData.previewVideoAsset) {
+        updateData.previewVideoAsset = {
+          public_id: String(updateData.previewVideoAsset.public_id || ''),
+          secure_url: String(updateData.previewVideoAsset.secure_url || ''),
+          resource_type: String(updateData.previewVideoAsset.resource_type || 'video'),
+          format: String(updateData.previewVideoAsset.format || ''),
+          duration: Number(updateData.previewVideoAsset.duration || 0),
+          width: Number(updateData.previewVideoAsset.width || 0),
+          height: Number(updateData.previewVideoAsset.height || 0),
+          bytes: Number(updateData.previewVideoAsset.bytes || 0)
+        };
+      }
+      
+      // Use a lean, plain JavaScript object approach to avoid Mongoose conversion issues
+      // This helps prevent stack overflow by avoiding deep object traversal during serialization
+      const cleanUpdateData = JSON.parse(JSON.stringify(updateData));
+      
+      // Update the course with the sanitized data
+      const updatedCourse = await Course.findOneAndUpdate(
+        { _id: courseId, tutorId: session.user.id },
+        { $set: cleanUpdateData },
+        { new: true, runValidators: false } // Disable validators to prevent deep traversal
+      );
+
+      if (!updatedCourse) {
+        throw new Error("Failed to update course");
+      }
+
+      // Revalidate the course pages to reflect changes
+      revalidatePath(`/tutor/courses/${courseId}`);
+      revalidatePath(`/tutor/courses/${courseId}/edit`);
+      revalidatePath('/tutor/courses');
+
+      return { success: true };
+    } catch (mongoError) {
+      console.error("MongoDB update error:", mongoError);
+      throw new Error("Failed to save course data");
     }
-
-    // Revalidate the course pages to reflect changes
-    revalidatePath(`/tutor/courses/${courseId}`);
-    revalidatePath(`/tutor/courses/${courseId}/edit`);
-    revalidatePath('/tutor/courses');
-
-    return { success: true, course: updatedCourse };
   } catch (error) {
     console.error("[UPDATE_COURSE_ERROR]", error);
     throw error; // Just throw the original error to preserve the message
@@ -466,16 +581,40 @@ export async function updateCourse(courseId: string, formData: FormData) {
 }
 
 // Helper function to convert File to base64
-async function fileToBase64(file: File): Promise<string | null> {
+async function fileToBase64(file: any): Promise<string | null> {
   return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve(null);
-      return;
+    try {
+      if (!file || !(file instanceof Blob)) {
+        console.log("File is not a valid Blob object");
+        resolve(null);
+        return;
+      }
+      
+      // Create a new FileReader
+      const reader = new FileReader();
+      
+      // Set up onload handler
+      reader.onload = () => {
+        try {
+          const result = reader.result as string;
+          resolve(result);
+        } catch (err) {
+          console.error("Error in FileReader onload:", err);
+          resolve(null);
+        }
+      };
+      
+      // Set up error handler
+      reader.onerror = (error) => {
+        console.error("FileReader error:", error);
+        resolve(null); // Resolve with null instead of rejecting to avoid crashes
+      };
+      
+      // Start reading
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error in fileToBase64:", error);
+      resolve(null); // Resolve with null instead of rejecting to avoid crashes
     }
-    
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
   });
 }

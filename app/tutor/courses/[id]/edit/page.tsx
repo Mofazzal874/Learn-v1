@@ -156,6 +156,20 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
     fetchCourse();
   }, [params.id, router]);
 
+  // Add a useEffect cleanup for object URLs to prevent memory leaks
+  useEffect(() => {
+    // Clean up any created object URLs on component unmount
+    return () => {
+      // Clean up any object URLs that might have been created
+      if (courseData.thumbnail instanceof File) {
+        URL.revokeObjectURL(URL.createObjectURL(courseData.thumbnail));
+      }
+      if (courseData.previewVideo instanceof File) {
+        URL.revokeObjectURL(URL.createObjectURL(courseData.previewVideo));
+      }
+    };
+  }, []);
+
   const handleSaveBasicDetails = (data: CourseFormData) => {
     setCourseData(data);
     setCurrentStep(1);
@@ -175,45 +189,99 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
       
       // Create a FormData object to send to the server
       const formData = new FormData();
-      formData.append('title', courseData.title);
-      formData.append('subtitle', courseData.subtitle);
-      formData.append('description', courseData.description);
-      formData.append('category', courseData.category);
-      formData.append('level', courseData.level);
-      formData.append('certificate', String(courseData.certificate));
       
-      // Handle thumbnail and video
+      // Basic details - required fields
+      formData.append('title', courseData.title || '');
+      formData.append('subtitle', courseData.subtitle || '');
+      formData.append('description', courseData.description || '');
+      formData.append('category', courseData.category || '');
+      formData.append('level', courseData.level || '');
+      formData.append('certificate', String(courseData.certificate || false));
+      
+      // Handle thumbnail and video assets - ensure we only send valid JSON data
       if (courseData.thumbnailAsset) {
-        formData.append('thumbnailAsset', JSON.stringify(courseData.thumbnailAsset));
-      }
-      if (courseData.previewVideoAsset) {
-        formData.append('previewVideoAsset', JSON.stringify(courseData.previewVideoAsset));
+        // Only include essential fields to avoid circular references
+        const simpleThumbAsset = {
+          secure_url: courseData.thumbnailAsset.secure_url,
+          public_id: courseData.thumbnailAsset.public_id,
+          resource_type: courseData.thumbnailAsset.resource_type,
+          format: courseData.thumbnailAsset.format,
+          bytes: courseData.thumbnailAsset.bytes,
+          width: courseData.thumbnailAsset.width,
+          height: courseData.thumbnailAsset.height
+        };
+        formData.append('thumbnailAsset', JSON.stringify(simpleThumbAsset));
       }
       
-      // Add thumbnail file if present
-      if (courseData.thumbnail) {
+      if (courseData.previewVideoAsset) {
+        // Only include essential fields to avoid circular references
+        const simpleVideoAsset = {
+          secure_url: courseData.previewVideoAsset.secure_url,
+          public_id: courseData.previewVideoAsset.public_id,
+          resource_type: courseData.previewVideoAsset.resource_type,
+          format: courseData.previewVideoAsset.format,
+          bytes: courseData.previewVideoAsset.bytes,
+          duration: courseData.previewVideoAsset.duration,
+          width: courseData.previewVideoAsset.width,
+          height: courseData.previewVideoAsset.height
+        };
+        formData.append('previewVideoAsset', JSON.stringify(simpleVideoAsset));
+      }
+      
+      // Add files only if they're valid File objects with size > 0
+      if (courseData.thumbnail instanceof File && courseData.thumbnail.size > 0) {
         formData.append('thumbnail', courseData.thumbnail);
       }
       
-      // Add preview video file if present
-      if (courseData.previewVideo) {
+      if (courseData.previewVideo instanceof File && courseData.previewVideo.size > 0) {
         formData.append('previewVideo', courseData.previewVideo);
       }
       
-      // Add sections and lessons
-      formData.append('sections', JSON.stringify(curriculumData));
+      // Add sections and lessons - handle circular references by creating simple objects
+      if (curriculumData && curriculumData.length > 0) {
+        const simpleSections = curriculumData.map(section => ({
+          title: section.title || '',
+          description: section.description || '',
+          lessons: section.lessons.map(lesson => ({
+            title: lesson.title || '',
+            description: lesson.description || '',
+            duration: lesson.duration || '',
+            type: lesson.type || 'video',
+            videoLink: lesson.videoLink || '',
+            assignmentLink: lesson.assignmentLink || '',
+            assignmentDescription: lesson.assignmentDescription || ''
+          }))
+        }));
+        formData.append('sections', JSON.stringify(simpleSections));
+      }
       
-      // Add pricing data
-      formData.append('pricing', JSON.stringify(pricingData));
+      // Add pricing data as a simple object
+      const simplePricing = {
+        basePrice: pricingData.basePrice || '0',
+        hasDiscount: Boolean(pricingData.hasDiscount),
+        discountPrice: pricingData.discountPrice || '',
+        discountEnds: pricingData.discountEnds || '',
+        isFree: Boolean(pricingData.isFree)
+      };
+      formData.append('pricing', JSON.stringify(simplePricing));
       
-      // Call the update course action
-      await updateCourse(params.id, formData);
+      console.log('Submitting course update...');
       
-      toast.success('Course updated successfully!');
-      router.push(`/tutor/courses/${params.id}`);
+      try {
+        // Call the update course action
+        const result = await updateCourse(params.id, formData);
+        
+        toast.success('Course updated successfully!');
+        router.push(`/tutor/courses/${params.id}`);
+      } catch (apiError) {
+        console.error('API error:', apiError);
+        const errorMessage = apiError instanceof Error ? apiError.message : 'Server error occurred. Please try again.';
+        toast.error(errorMessage);
+      }
     } catch (error) {
-      console.error('Failed to update course:', error);
-      toast.error('Failed to update course. Please try again.');
+      console.error('Form submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update course. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -291,14 +359,17 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
         {currentStep === 3 && (
           <PreviewForm
             courseData={{
-              ...courseData,
+              title: courseData.title,
+              subtitle: courseData.subtitle,
+              description: courseData.description,
+              category: courseData.category,
+              level: courseData.level,
+              certificate: courseData.certificate,
               sections: curriculumData,
               pricing: pricingData,
-              // Use existing thumbnail and preview URLs if available
-              thumbnail: courseData.thumbnailAsset?.secure_url || 
-                         (courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null),
-              previewVideo: courseData.previewVideoAsset?.secure_url || 
-                           (courseData.previewVideo ? URL.createObjectURL(courseData.previewVideo) : null),
+              // Use existing thumbnail and preview URLs without createObjectURL which can cause memory issues
+              thumbnail: courseData.thumbnailAsset?.secure_url || null,
+              previewVideo: courseData.previewVideoAsset?.secure_url || null
             }}
             courseId={params.id}
             onBack={() => setCurrentStep(2)}
