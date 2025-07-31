@@ -71,7 +71,12 @@ export async function createCourse({
   const session = await auth();
   
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized - Please sign in');
+  }
+
+  // Check if user has tutor role
+  if (session.user.role !== 'tutor') {
+    throw new Error('Unauthorized - Tutor access required');
   }
 
   await connectDB();

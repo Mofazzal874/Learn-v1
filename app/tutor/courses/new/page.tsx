@@ -108,9 +108,9 @@ export default function CreateCoursePage() {
       
       toast.success('Course created successfully!');
       router.push(`/tutor/courses/${courseId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to publish course:', error);
-      toast.error('Failed to create course. Please try again.');
+      toast.error(error.message || 'Failed to create course. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

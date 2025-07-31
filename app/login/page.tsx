@@ -50,11 +50,16 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
+      // Store the role in cookie before OAuth redirect
+      if (role) {
+        document.cookie = `selected-role=${role}; path=/; max-age=3600; SameSite=Lax`;
+      }
+      
       await signIn(provider, {
         callbackUrl: role === 'tutor' ? '/tutor/dashboard' : '/private/dashboard',
-        role // Pass role to social login
       });
     } catch (error) {
+      console.error('OAuth error:', error);
       setError(`Failed to sign in with ${provider}`);
     }
   };

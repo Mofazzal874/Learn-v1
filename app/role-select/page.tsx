@@ -12,6 +12,11 @@ interface RoleSelectProps {
 function RoleSelect({ mode }: RoleSelectProps) {
   const title = mode === 'login' ? 'Sign in as' : 'Sign up as';
   
+  const handleRoleSelection = (selectedRole: string) => {
+    // Store the selected role in a cookie
+    document.cookie = `selected-role=${selectedRole}; path=/; max-age=3600; SameSite=Lax`;
+  };
+  
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-indigo-600/10 to-purple-600/20 blur-3xl"></div>
@@ -25,7 +30,7 @@ function RoleSelect({ mode }: RoleSelectProps) {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href={`/${mode}?role=user`}>
+          <Link href={`/${mode}?role=user`} onClick={() => handleRoleSelection('user')}>
             <Card className="bg-[#141414] border-blue-500/20 hover:border-blue-500/40 transition-colors cursor-pointer">
               <CardContent className="p-6 flex flex-col items-center">
                 <Users className="h-12 w-12 text-blue-500 mb-4" />
@@ -37,7 +42,7 @@ function RoleSelect({ mode }: RoleSelectProps) {
             </Card>
           </Link>
 
-          <Link href={`/${mode}?role=tutor`}>
+          <Link href={`/${mode}?role=tutor`} onClick={() => handleRoleSelection('tutor')}>
             <Card className="bg-[#141414] border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-pointer">
               <CardContent className="p-6 flex flex-col items-center">
                 <GraduationCap className="h-12 w-12 text-purple-500 mb-4" />
