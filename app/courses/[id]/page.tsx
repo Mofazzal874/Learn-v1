@@ -6,7 +6,6 @@ import Image from "next/image";
 import { 
   BookOpen, 
   Users, 
-  Star, 
   Clock, 
   CheckCircle, 
   Play,
@@ -19,6 +18,8 @@ import {
 import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import { UserProgress } from "@/models/UserProgress";
+import CourseRating from "./components/CourseRating";
+import CourseReviews from "./components/CourseReviews";
 
 // Function to get course from the database
 async function getCourse(id: string) {
@@ -26,6 +27,7 @@ async function getCourse(id: string) {
   try {
     const course = await Course.findById(id)
       .populate('tutorId', 'firstName lastName image')
+      .populate('reviews.userId', 'firstName lastName image')
       .lean();
     return JSON.parse(JSON.stringify(course));
   } catch (error) {
@@ -174,13 +176,10 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                   <BookOpen className="h-5 w-5 text-gray-400" />
                   <span className="text-gray-300">{totalLessons} lessons</span>
                 </div>
-                {course.rating > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                    <span className="text-gray-300">{course.rating.toFixed(1)}</span>
-                    <span className="text-gray-500">({course.totalReviews} reviews)</span>
-                  </div>
-                )}
+                <CourseRating 
+                  courseId={resolvedParams.id}
+                  isLoggedIn={!!session}
+                />
               </div>
             </div>
 
@@ -282,6 +281,53 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                 </CardContent>
               </Card>
             )}
+
+            {/* Course Instructor Section */}
+            <div className="my-12">
+              <Card className="bg-gradient-to-r from-[#141414] to-[#1a1a1a] border-gray-700/50 shadow-xl">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-6">
+                    {/* Instructor Avatar */}
+                    <div className="flex-shrink-0">
+                      {course.tutorId?.image ? (
+                        <div className="relative">
+                          <Image
+                            src={course.tutorId.image}
+                            alt={`${course.tutorId.firstName} ${course.tutorId.lastName}`}
+                            width={72}
+                            height={72}
+                            className="rounded-full border-2 border-white/10 shadow-lg"
+                          />
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
+                        </div>
+                      ) : (
+                        <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center border-2 border-white/10 shadow-lg">
+                          <User className="h-8 w-8 text-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instructor Info */}
+                    <div className="flex-1">
+                      <div className="mb-1">
+                        <h3 className="text-2xl font-bold text-white mb-1">
+                          {course.tutorId?.firstName} {course.tutorId?.lastName}
+                        </h3>
+                        <p className="text-gray-300 font-medium">Course Instructor</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Reviews Section */}
+            <CourseReviews
+              courseId={resolvedParams.id}
+              initialReviews={course.reviews ? course.reviews.slice(0, 10) : []}
+              totalReviews={course.totalReviews || 0}
+              isLoggedIn={!!session}
+            />
           </div>
 
           {/* Sidebar */}
