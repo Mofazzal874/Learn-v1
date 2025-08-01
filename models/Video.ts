@@ -32,12 +32,18 @@ const videoSchema = new Schema({
   language: { type: String, default: 'English' },
   published: { type: Boolean, default: false },
   rating: { type: Number, default: 0 },
+  totalRatings: { type: Number, default: 0 },
   views: { type: Number, default: 0 },
   duration: { type: String }, // Video duration as string (e.g., "10:30")
   totalComments: { type: Number, default: 0 },
   comments: [{
     userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
     review: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  ratings: [{
+    userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
     createdAt: { type: Date, default: Date.now }
   }],
 }, {

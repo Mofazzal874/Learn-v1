@@ -6,7 +6,7 @@ interface VideoProgressTrackerProps {
   videoId: string;
   videoTitle: string;
   videoDuration: string;
-  videoTags: string[];
+  videoOutcomes: string[];
   isLoggedIn: boolean;
 }
 
@@ -14,7 +14,7 @@ export default function VideoProgressTracker({
   videoId, 
   videoTitle, 
   videoDuration, 
-  videoTags, 
+  videoOutcomes, 
   isLoggedIn 
 }: VideoProgressTrackerProps) {
   
@@ -47,13 +47,25 @@ export default function VideoProgressTracker({
             videoId,
             title: videoTitle,
             duration: durationInMinutes,
-            tags: videoTags
+            outcomes: videoOutcomes
           }),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.error('Failed to track video progress:', errorData);
+          console.error('Failed to track video progress:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            requestBody: {
+              videoId,
+              title: videoTitle,
+              duration: durationInMinutes,
+              outcomes: videoOutcomes
+            }
+          });
+        } else {
+          console.log('Video progress tracked successfully');
         }
 
       } catch (error) {
@@ -77,7 +89,7 @@ export default function VideoProgressTracker({
 
     incrementViews();
 
-  }, [videoId, videoTitle, videoDuration, videoTags, isLoggedIn]);
+  }, [videoId, videoTitle, videoDuration, videoOutcomes, isLoggedIn]);
 
   // This component doesn't render anything, it's just for tracking
   return null;

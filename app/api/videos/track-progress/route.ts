@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { videoId, title, duration, tags } = await req.json();
+    const { videoId, title, duration, outcomes } = await req.json();
 
     if (!videoId) {
       return NextResponse.json(
@@ -74,23 +74,23 @@ export async function POST(req: NextRequest) {
     // Update streak
     userProgress.updateStreak();
 
-    // Add skills from video tags
-    if (tags && Array.isArray(tags)) {
-      for (const tag of tags) {
+    // Add skills from video outcomes
+    if (outcomes && Array.isArray(outcomes)) {
+      for (const outcome of outcomes) {
         const existingSkill = userProgress.skills.find(
-          (skill: { name: string }) => skill.name.toLowerCase() === tag.toLowerCase()
+          (skill: { name: string }) => skill.name.toLowerCase() === outcome.toLowerCase()
         );
         
         if (existingSkill) {
-          // Increase skill progress slightly
-          existingSkill.progress = Math.min(100, existingSkill.progress + 2);
+          // Increase skill progress more significantly for outcomes
+          existingSkill.progress = Math.min(100, existingSkill.progress + 5);
           existingSkill.lastUpdated = new Date();
         } else {
-          // Add new skill
+          // Add new skill from outcome
           userProgress.skills.push({
-            name: tag,
+            name: outcome,
             level: 'beginner',
-            progress: 5, // Start with 5% progress
+            progress: 10, // Start with 10% progress for outcomes
             earnedFrom: [],
             lastUpdated: new Date()
           });
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       type: 'video_watched',
       description: `Watched "${title}"`,
       videoId,
-      metadata: { duration: videoMinutes, tags },
+      metadata: { duration: videoMinutes, outcomes },
       createdAt: new Date()
     });
     
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
         totalLearningTime: userProgress.totalLearningTime,
         totalVideosWatched: userProgress.totalVideosWatched,
         newAchievements: achievementsToAdd.length,
-        skillsUpdated: tags?.length || 0
+        skillsUpdated: outcomes?.length || 0
       }
     });
 

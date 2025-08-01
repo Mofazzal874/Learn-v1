@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { Card } from "@/components/ui/card";
-import { Video, MoreVertical, Users, Star, Eye, Edit, Trash2, PlusCircle, Play } from "lucide-react";
+import { Video, MoreVertical, Users, Star, Eye, Edit, Trash2, PlusCircle, Play, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -96,7 +96,7 @@ export default async function UserVideos() {
                           </div>
                         </div>
                         <div>
-                          <Link href={`/videos/${video._id}`}>
+                          <Link href={`/private/videos/${video._id}`}>
                             <h3 className="text-xl font-semibold text-white mb-2 hover:text-blue-400 transition-colors">
                               {video.title}
                             </h3>
@@ -142,11 +142,19 @@ export default async function UserVideos() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 bg-[#1a1a1a] border-gray-800">
                           <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
-                            <Link href={`/videos/${video._id}`} className="flex w-full items-center">
+                            <Link href={`/private/videos/${video._id}`} className="flex w-full items-center">
                               <Eye className="h-4 w-4 mr-2" />
-                              View Video
+                              Manage Video
                             </Link>
                           </DropdownMenuItem>
+                          {video.published && (
+                            <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
+                              <Link href={`/videos/${video._id}`} className="flex w-full items-center" target="_blank">
+                                <Globe className="h-4 w-4 mr-2" />
+                                View Public Page
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
                             <Link href={`/private/videos/${video._id}/edit`} className="flex w-full items-center">
                               <Edit className="h-4 w-4 mr-2" />
