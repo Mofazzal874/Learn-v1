@@ -21,6 +21,7 @@ interface DirectUploaderProps {
   resourceType: 'image' | 'video';
   maxFileSize?: number; // in MB
   buttonText?: string;
+  folder?: string; // Custom folder path
 }
 
 export default function DirectUploader({
@@ -28,6 +29,7 @@ export default function DirectUploader({
   resourceType = 'image',
   maxFileSize = resourceType === 'image' ? 5 : 50,
   buttonText = resourceType === 'image' ? 'Upload Image' : 'Upload Video',
+  folder,
 }: DirectUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export default function DirectUploader({
         body: JSON.stringify({
           file: base64,
           resourceType,
-          folder: `courses/${resourceType}s`,
+          folder: folder || `courses/${resourceType}s`,
         }),
       });
       

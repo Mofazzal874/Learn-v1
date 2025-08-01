@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
 
     // Upload the file to Cloudinary using our existing helper functions
     if (resourceType === 'image') {
-      result = await uploadImage(file, folder || 'courses/images');
+      result = await uploadImage(file, folder || 'uploads/images');
     } else {
-      result = await uploadVideo(file, folder || 'courses/videos');
+      result = await uploadVideo(file, folder || 'uploads/videos');
     }
 
     // Return the result

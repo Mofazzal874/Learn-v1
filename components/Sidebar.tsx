@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target, Map, LineChart, Sparkles, DollarSign, LogOut } from 'lucide-react';
+import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target, Map, LineChart, Sparkles, DollarSign, LogOut, Video, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,6 +24,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: Home, label: 'Dashboard', href: '/private/dashboard' },
         { icon: Compass, label: 'Explore', href: '/explore' },
         { icon: BookOpen, label: 'My Courses', href: '/private/my-courses' },
+        { icon: Video, label: 'My Videos', href: '/private/videos' },
+        { icon: Upload, label: 'Upload Video', href: '/private/videos/new' },
         { icon: Map, label: 'Create Roadmap', href: '/roadmap' },
         { icon: Map, label: 'Saved Roadmaps', href: '/roadmap/saved' },
       ]
@@ -54,6 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: LineChart, label: 'Analytics', href: '/tutor/analytics' },
         { icon: BookOpen, label: 'My Courses', href: '/tutor/courses' },
         { icon: PlusCircle, label: 'Create Course', href: '/tutor/courses/new' },
+        { icon: Video, label: 'My Videos', href: '/tutor/videos' },
+        { icon: Upload, label: 'Upload Video', href: '/tutor/videos/new' },
       ]
     },
     {
