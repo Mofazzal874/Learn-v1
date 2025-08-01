@@ -46,7 +46,7 @@ export async function PATCH(
     // Update the course to be published
     const updatedCourse = await Course.findByIdAndUpdate(
       id,
-      { published: true },
+      { published: true, approved: true },
       { new: true }
     );
 

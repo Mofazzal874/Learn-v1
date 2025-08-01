@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Star, Users, Eye, Clock, Search, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { BookOpen, Star, Users, Eye, Clock, Search, ChevronRight, Play, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface Course {
   _id: string;
@@ -62,8 +63,13 @@ interface Pagination {
   hasPrev: boolean;
 }
 
-interface ApiResponse<T> {
-  [key: string]: T[] | Pagination;
+interface CourseApiResponse {
+  courses: Course[];
+  pagination: Pagination;
+}
+
+interface VideoApiResponse {
+  videos: Video[];
   pagination: Pagination;
 }
 
@@ -180,52 +186,7 @@ function VideoCard({ video }: { video: Video }) {
   );
 }
 
-function Pagination({ pagination, onPageChange }: { pagination: Pagination; onPageChange: (page: number) => void }) {
-  return (
-    <div className="flex items-center justify-center gap-2 mt-8">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onPageChange(pagination.currentPage - 1)}
-        disabled={!pagination.hasPrev}
-        className="border-gray-700 text-gray-300"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Previous
-      </Button>
-      
-      <div className="flex items-center gap-2">
-        {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-          const page = i + 1;
-          const isActive = page === pagination.currentPage;
-          
-          return (
-            <Button
-              key={page}
-              variant={isActive ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPageChange(page)}
-              className={isActive ? "bg-blue-600" : "border-gray-700 text-gray-300"}
-            >
-              {page}
-            </Button>
-          );
-        })}
-      </div>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onPageChange(pagination.currentPage + 1)}
-        disabled={!pagination.hasNext}
-        className="border-gray-700 text-gray-300"
-      >
-        Next
-        <ChevronRight className="w-4 h-4" />
-      </Button>
-    </div>
-  );
-}
+
 
 export default function ExplorePage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -245,15 +206,19 @@ export default function ExplorePage() {
     hasPrev: false
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCoursesLoading, setIsCoursesLoading] = useState(false);
+  const [isVideosLoading, setIsVideosLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const fetchCourses = async (page = 1, search = '') => {
+  // Debounce search query for smooth searching
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const fetchCourses = async (search = '') => {
     try {
-      setIsLoading(true);
+      setIsCoursesLoading(true);
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '12'
+        page: '1',
+        limit: '100' // Load many items for horizontal scrolling
       });
       
       if (search) {
@@ -263,23 +228,23 @@ export default function ExplorePage() {
       const response = await fetch(`/api/explore/popular-courses?${params}`);
       if (!response.ok) throw new Error('Failed to fetch courses');
       
-      const data: ApiResponse<Course> = await response.json();
-      setCourses(data.courses as Course[]);
+      const data: CourseApiResponse = await response.json();
+      setCourses(data.courses);
       setCoursePagination(data.pagination);
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast.error('Failed to load courses');
     } finally {
-      setIsLoading(false);
+      setIsCoursesLoading(false);
     }
   };
 
-  const fetchVideos = async (page = 1, search = '') => {
+  const fetchVideos = async (search = '') => {
     try {
-      setIsLoading(true);
+      setIsVideosLoading(true);
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '12'
+        page: '1',
+        limit: '100' // Load many items for horizontal scrolling
       });
       
       if (search) {
@@ -289,37 +254,31 @@ export default function ExplorePage() {
       const response = await fetch(`/api/explore/popular-videos?${params}`);
       if (!response.ok) throw new Error('Failed to fetch videos');
       
-      const data: ApiResponse<Video> = await response.json();
-      setVideos(data.videos as Video[]);
+      const data: VideoApiResponse = await response.json();
+      setVideos(data.videos);
       setVideoPagination(data.pagination);
     } catch (error) {
       console.error('Error fetching videos:', error);
       toast.error('Failed to load videos');
     } finally {
-      setIsLoading(false);
+      setIsVideosLoading(false);
     }
   };
 
-  const handleSearch = async (query: string) => {
-    setActiveSearch(query);
-    await Promise.all([
-      fetchCourses(1, query),
-      fetchVideos(1, query)
-    ]);
-  };
-
-  const handleCoursePageChange = (page: number) => {
-    fetchCourses(page, activeSearch);
-  };
-
-  const handleVideoPageChange = (page: number) => {
-    fetchVideos(page, activeSearch);
-  };
-
+  // Effect for debounced search
   useEffect(() => {
-    // Initial load
+    if (!isInitialLoad) {
+      // Search with new query
+      fetchCourses(debouncedSearchQuery);
+      fetchVideos(debouncedSearchQuery);
+    }
+  }, [debouncedSearchQuery, isInitialLoad]);
+
+  // Initial load effect
+  useEffect(() => {
     fetchCourses();
     fetchVideos();
+    setIsInitialLoad(false);
   }, []);
 
   return (
@@ -333,93 +292,154 @@ export default function ExplorePage() {
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              {(isCoursesLoading || isVideosLoading) ? (
+                <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-400 animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              )}
               <Input
                 type="text"
-                placeholder="Search courses and videos..."
+                placeholder="Search courses and videos... (auto-search enabled)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch(searchQuery);
-                  }
-                }}
-                className="pl-10 pr-4 py-3 bg-[#141414] border-gray-800 text-white placeholder-gray-400 focus:border-blue-500"
+                className="pl-10 pr-4 py-3 bg-[#141414] border-gray-800 text-white placeholder-gray-400 focus:border-blue-500 transition-all duration-200"
               />
-              <Button
-                onClick={() => handleSearch(searchQuery)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700"
-                size="sm"
-              >
-                Search
-              </Button>
+              {searchQuery && (
+                <Button
+                  onClick={() => setSearchQuery('')}
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </div>
 
-        {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">Loading content...</p>
-          </div>
-        )}
-
         {/* Popular Courses Section */}
         <div className="mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">Popular Courses</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-3xl font-bold">Popular Courses</h2>
+              {isCoursesLoading && (
+                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              )}
+            </div>
             <span className="text-sm text-gray-400">
-              {coursePagination.total} courses found
+              {courses.length} courses {searchQuery && `for "${searchQuery}"`}
             </span>
           </div>
           
           {courses.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="relative">
+              <div className="flex gap-6 overflow-x-auto pb-4 scroll-smooth scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
                 {courses.map((course) => (
-                  <CourseCard key={course._id} course={course} />
+                  <div key={course._id} className="flex-shrink-0 w-80">
+                    <CourseCard course={course} />
+                  </div>
                 ))}
+                {/* Scroll hint */}
+                {courses.length > 3 && (
+                  <div className="flex-shrink-0 w-20 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <ChevronRight className="w-6 h-6 mx-auto mb-1 animate-pulse" />
+                      <div className="text-xs">Scroll</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              <Pagination
-                pagination={coursePagination}
-                onPageChange={handleCoursePageChange}
-              />
-            </>
+              {coursePagination.total > courses.length && (
+                <div className="text-center mt-4 text-sm text-gray-400">
+                  Showing {courses.length} of {coursePagination.total} courses
+                </div>
+              )}
+            </div>
+          ) : isCoursesLoading ? (
+            <div className="flex gap-6 overflow-x-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-80">
+                  <Card className="bg-[#141414] border-gray-800 shadow-xl overflow-hidden animate-pulse">
+                    <div className="aspect-video w-full bg-gray-700"></div>
+                    <CardContent className="p-4">
+                      <div className="h-4 bg-gray-700 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-700 rounded mb-3 w-3/4"></div>
+                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12">
               <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No courses found</p>
+              <p className="text-gray-400">
+                {searchQuery ? `No courses found for "${searchQuery}"` : 'No courses found'}
+              </p>
             </div>
           )}
         </div>
 
         {/* Popular Videos Section */}
         <div>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">Popular Videos</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-3xl font-bold">Popular Videos</h2>
+              {isVideosLoading && (
+                <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+              )}
+            </div>
             <span className="text-sm text-gray-400">
-              {videoPagination.total} videos found
+              {videos.length} videos {searchQuery && `for "${searchQuery}"`}
             </span>
           </div>
           
           {videos.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="relative">
+              <div className="flex gap-6 overflow-x-auto pb-4 scroll-smooth scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
                 {videos.map((video) => (
-                  <VideoCard key={video._id} video={video} />
+                  <div key={video._id} className="flex-shrink-0 w-80">
+                    <VideoCard video={video} />
+                  </div>
                 ))}
+                {/* Scroll hint */}
+                {videos.length > 3 && (
+                  <div className="flex-shrink-0 w-20 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <ChevronRight className="w-6 h-6 mx-auto mb-1 animate-pulse" />
+                      <div className="text-xs">Scroll</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              <Pagination
-                pagination={videoPagination}
-                onPageChange={handleVideoPageChange}
-              />
-            </>
+              {videoPagination.total > videos.length && (
+                <div className="text-center mt-4 text-sm text-gray-400">
+                  Showing {videos.length} of {videoPagination.total} videos
+                </div>
+              )}
+            </div>
+          ) : isVideosLoading ? (
+            <div className="flex gap-6 overflow-x-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-80">
+                  <Card className="bg-[#141414] border-gray-800 shadow-xl overflow-hidden animate-pulse">
+                    <div className="aspect-video w-full bg-gray-700"></div>
+                    <CardContent className="p-4">
+                      <div className="h-4 bg-gray-700 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-700 rounded mb-3 w-3/4"></div>
+                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12">
               <Play className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No videos found</p>
+              <p className="text-gray-400">
+                {searchQuery ? `No videos found for "${searchQuery}"` : 'No videos found'}
+              </p>
             </div>
           )}
         </div>

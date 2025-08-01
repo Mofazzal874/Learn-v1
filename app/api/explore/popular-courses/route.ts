@@ -13,10 +13,9 @@ export async function GET(req: NextRequest) {
     
     const skip = (page - 1) * limit;
     
-    // Build search query
-    let searchQuery: Record<string, unknown> = {
-      published: true,
-      approved: true
+    // Build search query - only require published, not approved for now
+    const searchQuery: Record<string, unknown> = {
+      published: true
     };
     
     if (search) {

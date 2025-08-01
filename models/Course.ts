@@ -85,7 +85,6 @@ const courseSchema = new Schema({
 
 // Create indexes
 courseSchema.index({ title: 'text', description: 'text', tags: 'text' });
-courseSchema.index({ slug: 1 });
 courseSchema.index({ tutorId: 1 });
 courseSchema.index({ category: 1 });
 courseSchema.index({ published: 1, approved: 1 });
