@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import connectDB from "@/lib/db";
 import { Video } from "@/models/Video";
+import CommentsSection from "./components/CommentsSection";
+import VideoProgressTracker from "./components/VideoProgressTracker";
+import CopyLinkButton from "./components/CopyLinkButton";
 
 // Function to get video from the database
 async function getVideo(id: string) {
@@ -27,6 +30,7 @@ async function getVideo(id: string) {
   try {
     const video = await Video.findById(id)
       .populate('userId', 'firstName lastName image')
+      .populate('comments.userId', 'firstName lastName image')
       .lean();
     return JSON.parse(JSON.stringify(video));
   } catch (error) {
@@ -65,8 +69,23 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
   const thumbnailUrl = video.thumbnailAsset?.secure_url || video.thumbnail;
   const videoUrl = video.videoAsset?.secure_url || video.videoLink;
 
+  // Sort comments by newest first
+  const sortedComments = video.comments ? 
+    [...video.comments].sort((a: { createdAt: string }, b: { createdAt: string }) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ) : [];
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Video Progress Tracker */}
+      <VideoProgressTracker
+        videoId={resolvedParams.id}
+        videoTitle={video.title}
+        videoDuration={video.duration || ''}
+        videoTags={video.tags || []}
+        isLoggedIn={!!session}
+      />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <div className="mb-6">
@@ -119,11 +138,6 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
                 <span className="px-3 py-1 rounded-full bg-gray-700 text-gray-300 text-sm capitalize">
                   {video.level}
                 </span>
-                {video.published && (
-                  <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-sm">
-                    Published
-                  </span>
-                )}
               </div>
 
               <h1 className="text-4xl font-bold mb-4">{video.title}</h1>
@@ -163,14 +177,7 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
                   <ThumbsUp className="h-4 w-4 mr-2" />
                   Like
                 </Button>
-                <Button variant="outline" className="border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
-                <Button variant="outline" className="border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </Button>
+                <CopyLinkButton />
               </div>
             </div>
 
@@ -180,68 +187,67 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
                 <CardTitle className="text-white">About this video</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-300 whitespace-pre-wrap">{video.description}</p>
+                <div 
+                  className="text-gray-300 prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: video.description }}
+                />
               </CardContent>
             </Card>
 
-            {/* What you'll learn */}
-            {video.outcomes && video.outcomes.length > 0 && (
-              <Card className="bg-[#141414] border-gray-800 mb-8">
-                <CardHeader>
-                  <CardTitle className="text-white">What you'll learn</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {video.outcomes.map((outcome: string, index: number) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Play className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-300">{outcome}</span>
-                      </div>
-                    ))}
+            {/* Combined Learning Information */}
+            <Card className="bg-[#141414] border-gray-800 mb-8">
+              <CardHeader>
+                <CardTitle className="text-white">Learning Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* What you'll learn */}
+                {video.outcomes && video.outcomes.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4">What you&apos;ll learn</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {video.outcomes.map((outcome: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <Play className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-300">{outcome}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
 
-            {/* Prerequisites */}
-            {video.prerequisites && video.prerequisites.length > 0 && (
-              <Card className="bg-[#141414] border-gray-800 mb-8">
-                <CardHeader>
-                  <CardTitle className="text-white">Prerequisites</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {video.prerequisites.map((prerequisite: string, index: number) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Play className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-300">{prerequisite}</span>
-                      </div>
-                    ))}
+                {/* Prerequisites */}
+                {video.prerequisites && video.prerequisites.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4">Prerequisites</h3>
+                    <div className="space-y-2">
+                      {video.prerequisites.map((prerequisite: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <Play className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-300">{prerequisite}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
 
-            {/* Tags */}
-            {video.tags && video.tags.length > 0 && (
-              <Card className="bg-[#141414] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Tags</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {video.tags.map((tag: string, index: number) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 rounded-full bg-gray-700 text-gray-300 text-sm"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
+                {/* Tags */}
+                {video.tags && video.tags.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {video.tags.map((tag: string, index: number) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 rounded-full bg-gray-700 text-gray-300 text-sm"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -271,10 +277,7 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
                   </div>
                 </div>
 
-                {/* Follow Button */}
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white mb-6">
-                  Follow
-                </Button>
+
 
                 {/* Video Stats */}
                 <div className="space-y-3 text-sm">
@@ -305,43 +308,12 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
             </Card>
 
             {/* Comments Section */}
-            <Card className="bg-[#141414] border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Comments ({video.totalComments || 0})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {session ? (
-                  <div className="mb-4">
-                    <textarea
-                      placeholder="Add a comment..."
-                      className="w-full bg-[#0a0a0a] border border-gray-800 rounded-lg p-3 text-white placeholder-gray-400 resize-none"
-                      rows={3}
-                    />
-                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
-                      Post Comment
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 mb-4">Sign in to comment</p>
-                    <Link href="/login">
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                        Sign In
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-
-                {/* Sample comment structure */}
-                <div className="text-center py-8 text-gray-400">
-                  No comments yet. Be the first to comment!
-                </div>
-              </CardContent>
-            </Card>
+            <CommentsSection
+              videoId={resolvedParams.id}
+              initialComments={sortedComments}
+              totalComments={video.totalComments || 0}
+              isLoggedIn={!!session}
+            />
           </div>
         </div>
       </div>

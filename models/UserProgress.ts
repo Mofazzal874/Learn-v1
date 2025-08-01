@@ -133,7 +133,7 @@ const userProgressSchema = new Schema({
 });
 
 // Indexes for better performance
-userProgressSchema.index({ userId: 1 });
+// Note: userId already has unique index from schema definition
 userProgressSchema.index({ lastActive: -1 });
 userProgressSchema.index({ currentStreak: -1 });
 userProgressSchema.index({ totalLearningTime: -1 });
