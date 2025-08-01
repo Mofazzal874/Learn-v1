@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {
   Select,
@@ -14,10 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Loader2, Video, Image as ImageIcon, Plus, X } from "lucide-react";
+import { Upload, Loader2, Video, Plus, X } from "lucide-react";
 import Image from "next/image";
 import DirectUploader from '@/app/tutor/courses/new/components/DirectUploader';
 import { VideoFormData } from '@/app/actions/video';
+import { getCategoryOptions } from '@/lib/categories';
 
 interface CloudinaryAsset {
   secure_url: string;
@@ -68,7 +68,7 @@ export default function VideoUploadForm({
   const [newOutcome, setNewOutcome] = useState('');
   const [newTag, setNewTag] = useState('');
 
-  const handleInputChange = (field: keyof VideoFormData, value: any) => {
+  const handleInputChange = (field: keyof VideoFormData, value: string | string[]) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -225,15 +225,12 @@ export default function VideoUploadForm({
                   <SelectTrigger className="mt-2 bg-[#0a0a0a] border-gray-800 text-white">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-gray-800">
-                    <SelectItem value="programming" className="text-white">Programming</SelectItem>
-                    <SelectItem value="design" className="text-white">Design</SelectItem>
-                    <SelectItem value="business" className="text-white">Business</SelectItem>
-                    <SelectItem value="marketing" className="text-white">Marketing</SelectItem>
-                    <SelectItem value="music" className="text-white">Music</SelectItem>
-                    <SelectItem value="lifestyle" className="text-white">Lifestyle</SelectItem>
-                    <SelectItem value="education" className="text-white">Education</SelectItem>
-                    <SelectItem value="technology" className="text-white">Technology</SelectItem>
+                  <SelectContent className="bg-[#1a1a1a] border-gray-800 max-h-60">
+                    {getCategoryOptions().map((category) => (
+                      <SelectItem key={category.value} value={category.value} className="text-white">
+                        {category.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
