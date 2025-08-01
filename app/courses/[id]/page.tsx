@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
+import { UserProgress } from "@/models/UserProgress";
 
 // Function to get course from the database
 async function getCourse(id: string) {
@@ -33,6 +34,28 @@ async function getCourse(id: string) {
   }
 }
 
+// Function to check if user is enrolled in the course
+async function checkEnrollment(userId: string, courseId: string) {
+  if (!userId) return false;
+  
+  await connectDB();
+  try {
+    const userProgress = await UserProgress.findOne({ userId }).lean() as {
+      enrolledCourses?: { courseId: { toString(): string } }[]
+    } | null;
+    
+    if (!userProgress?.enrolledCourses) return false;
+    
+    return userProgress.enrolledCourses.some(
+      (enrollment) => 
+        enrollment.courseId.toString() === courseId
+    );
+  } catch (error) {
+    console.error('Error checking enrollment:', error);
+    return false;
+  }
+}
+
 interface CoursePageProps {
   params: Promise<{ id: string }> | { id: string };
 }
@@ -41,6 +64,7 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
   const session = await auth();
   const resolvedParams = await params;
   const course = await getCourse(resolvedParams.id);
+  const isEnrolled = session?.user?.id ? await checkEnrollment(session.user.id, resolvedParams.id) : false;
 
   if (!course) {
     return (
@@ -124,11 +148,6 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                 <span className="px-3 py-1 rounded-full bg-gray-700 text-gray-300 text-sm capitalize">
                   {course.level}
                 </span>
-                {course.published && (
-                  <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-sm">
-                    Published
-                  </span>
-                )}
               </div>
 
               <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
@@ -300,20 +319,28 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
 
                 {/* CTA Button */}
                 <div className="mb-6">
-                  {session ? (
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3">
-                      Enroll Now
-                    </Button>
+                  {isEnrolled ? (
+                    <div className="space-y-3">
+                      <div className="w-full bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg p-3 text-center">
+                        ✓ You&apos;re enrolled in this course
+                      </div>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        Continue Learning
+                      </Button>
+                    </div>
+                  ) : session ? (
+                    <Link href={`/courses/${resolvedParams.id}/enroll`}>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        Enroll Now
+                      </Button>
+                    </Link>
                   ) : (
                     <Link href="/login">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                         Login to Enroll
                       </Button>
                     </Link>
                   )}
-                  <Button variant="outline" className="w-full border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
-                    Add to Wishlist
-                  </Button>
                 </div>
 
                 {/* Course Features */}
