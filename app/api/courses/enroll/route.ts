@@ -124,9 +124,10 @@ export async function POST(req: NextRequest) {
     // Save user progress
     await userProgress.save();
 
-    // Update course enrollment count (if you have this field)
+    // Update course enrollment count and add user to enrolledUsers array
     await Course.findByIdAndUpdate(courseId, {
-      $inc: { totalStudents: 1 }
+      $inc: { totalStudents: 1 },
+      $addToSet: { enrolledUsers: session.user.id }
     });
 
     return NextResponse.json({
