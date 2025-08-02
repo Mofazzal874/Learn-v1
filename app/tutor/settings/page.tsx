@@ -1,43 +1,12 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Bell, Lock, Users, Globe, DollarSign } from "lucide-react";
+import { toast } from "react-toastify";
+import {  Lock, DollarSign } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-
-interface NotificationSetting {
-  id: string;
-  title: string;
-  description: string;
-  enabled: boolean;
-}
-
-const tutorNotifications: NotificationSetting[] = [
-  {
-    id: "new-enrollment",
-    title: "New Student Enrollments",
-    description: "Get notified when a student enrolls in your course",
-    enabled: true
-  },
-  {
-    id: "course-feedback",
-    title: "Course Reviews & Feedback",
-    description: "Receive notifications for new course reviews and ratings",
-    enabled: true
-  },
-  {
-    id: "course-questions",
-    title: "Student Questions",
-    description: "Get notified when students ask questions in your courses",
-    enabled: true
-  },
-  {
-    id: "earnings-update",
-    title: "Earnings Updates",
-    description: "Receive notifications about your earnings and payouts",
-    enabled: true
-  }
-];
 
 function SettingSection({ children, icon: Icon, title }: {
   children: React.ReactNode;
@@ -57,19 +26,50 @@ function SettingSection({ children, icon: Icon, title }: {
   );
 }
 
-function NotificationToggle({ setting }: { setting: NotificationSetting }) {
-  return (
-    <div className="flex items-center justify-between py-4 border-b border-gray-800 last:border-0">
-      <div>
-        <div className="font-medium text-white mb-1">{setting.title}</div>
-        <div className="text-sm text-gray-400">{setting.description}</div>
-      </div>
-      <Switch checked={setting.enabled} />
-    </div>
-  );
-}
+
 
 export default function TutorSettingsPage() {
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  
+
+  const handlePasswordChange = async () => {
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("All fields are required.");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+    setLoading(true);
+
+    const res = await fetch("/api/tutor/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    setLoading(false);
+
+    const data = await res.json();
+
+    if (res.ok) {
+      toast.success(data.message || "Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } else {
+      toast.error(data.message || "Failed to change password.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
       <div className="max-w-4xl mx-auto">
@@ -80,14 +80,7 @@ export default function TutorSettingsPage() {
         </div>
 
         <div className="space-y-8">
-          {/* Notification Settings */}
-          <SettingSection icon={Bell} title="Notification Preferences">
-            <div className="space-y-1">
-              {tutorNotifications.map((setting) => (
-                <NotificationToggle key={setting.id} setting={setting} />
-              ))}
-            </div>
-          </SettingSection>
+          
 
           {/* Account Settings */}
           <SettingSection icon={Lock} title="Account Settings">
@@ -97,7 +90,10 @@ export default function TutorSettingsPage() {
                 <Input
                   id="current-password"
                   type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                   className="bg-[#1c1c1c] border-gray-800 text-white placeholder:text-gray-500"
+                  required
                 />
               </div>
               <div className="grid gap-2">
@@ -105,7 +101,10 @@ export default function TutorSettingsPage() {
                 <Input
                   id="new-password"
                   type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   className="bg-[#1c1c1c] border-gray-800 text-white placeholder:text-gray-500"
+                  required
                 />
               </div>
               <div className="grid gap-2">
@@ -113,37 +112,19 @@ export default function TutorSettingsPage() {
                 <Input
                   id="confirm-password"
                   type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-[#1c1c1c] border-gray-800 text-white placeholder:text-gray-500"
+                  required
                 />
               </div>
-              <Button className="bg-blue-500 hover:bg-blue-600">Update Password</Button>
-            </div>
-          </SettingSection>
-
-          {/* Teaching Settings */}
-          <SettingSection icon={Users} title="Teaching Settings">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-                <div>
-                  <div className="font-medium text-white mb-1">Direct Messaging</div>
-                  <div className="text-sm text-gray-400">Allow students to send you direct messages</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-                <div>
-                  <div className="font-medium text-white mb-1">Course Reviews</div>
-                  <div className="text-sm text-gray-400">Show course ratings and reviews publicly</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between pb-4">
-                <div>
-                  <div className="font-medium text-white mb-1">Student Progress Tracking</div>
-                  <div className="text-sm text-gray-400">Track and analyze student progress in your courses</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
+              <Button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-8"
+                onClick={handlePasswordChange}
+                disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
             </div>
           </SettingSection>
 

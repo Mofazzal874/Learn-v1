@@ -3,6 +3,8 @@ import connectDB from "@/lib/db";
 import { getSession } from "@/lib/getSession";
 import { User } from "@/models/User";
 import { UserProgress } from "@/models/UserProgress";
+import { Course } from "@/models/Course";
+
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -18,15 +20,20 @@ export async function GET(req: NextRequest) {
       return new Response(JSON.stringify({ message: "User not found" }), { status: 404 });
     }
 
-    const userProgress = await UserProgress.findOne({ userId: session.user.id }).lean();
+   const courses = await Course.find({tutorId:session.user.id}).lean();
+   
+   const totalStudents = courses.reduce((sum,course) => sum + (course.totalStudents || 0), 0 );
 
-    const userProgressData = {
-      completedCourses: userProgress?.totalCoursesCompleted || 0,
-      hoursSpent: userProgress?.totalLearningTime ? Math.round(userProgress.totalLearningTime / 60) : 0,
-      earnedCertificates: userProgress?.totalCertificatesEarned || 0,
-    };
+   const activeCourses = courses.filter(course => course.published && course.approved).length;
 
-    return new Response(JSON.stringify(userProgressData), { status: 200 });
+   let totalRating = 0;
+   let totalRatingsCount = 0;
+
+   const tutorStats = {
+    user
+   }
+
+    return new Response(JSON.stringify(tutorStats), { status: 200 });
   }catch(error){
     return new Response(JSON.stringify({ message: "Server error", error: error.message }), { status: 500 });
   }

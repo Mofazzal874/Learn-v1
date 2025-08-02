@@ -3,11 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/context/UserContext";
 import { Camera, Mail, MapPin, Pencil, Phone, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 
 export default function ProfilePage() {
-  const { user,setUser } = useUser();
+  const { user, setUser } = useUser();
+
+  const [ userProgress,setUserProgress] = useState(null);
+
+  useEffect(()=>{
+    const fetchUserProgress = async () =>{
+      try{
+        const res = await fetch("/api/user/profile");
+        if(res.ok){
+          const data = await res.json();
+          setUserProgress(data);
+      }
+    }catch(error){
+      console.error("Error fetching user progress:",error);
+    }
+  };
+  fetchUserProgress();
+  },[]);
 
   const [loading, setLoading] = useState(false);
 
@@ -314,13 +331,13 @@ export default function ProfilePage() {
                 <div className="p-4 rounded-lg bg-[#1a1a1a] border border-gray-800">
                   <div className="text-sm text-gray-400">Courses Completed</div>
                   <div className="mt-1 text-2xl font-semibold text-white">
-                    {user.completedCourses? user.completedCourses:0}
+                    { userProgress?.completedCourses}
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-[#1a1a1a] border border-gray-800">
                   <div className="text-sm text-gray-400">Hours Spent</div>
                   <div className="mt-1 text-2xl font-semibold text-white">
-                    {user.hoursSpent? user.hoursSpent:0}
+                    {userProgress?.hoursSpent}
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-[#1a1a1a] border border-gray-800">
@@ -328,7 +345,7 @@ export default function ProfilePage() {
                     Certificates Earned
                   </div>
                   <div className="mt-1 text-2xl font-semibold text-white">
-                    {user.earnedCertificates? user.earnedCertificates:0}
+                    {userProgress?.earnedCertificates}
                   </div>
                 </div>
               </div>
