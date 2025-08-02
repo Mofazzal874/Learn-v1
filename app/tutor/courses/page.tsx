@@ -120,6 +120,7 @@ export default async function TutorCourses() {
                               Edit Course
                             </Link>
                           </DropdownMenuItem>
+
                           <form action={`/api/courses/${course._id}/delete`}>
                             <DropdownMenuItem className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-900/20">
                               <button type="submit" className="flex w-full items-center">
@@ -146,6 +147,15 @@ export default async function TutorCourses() {
                         <div className="text-sm text-gray-400">Total Reviews</div>
                         <div className="text-lg font-semibold text-purple-400">{course.totalReviews || 0}</div>
                       </div>
+                      <Link href={`/tutor/courses/${course._id}/enrolled-students`}>
+                        <div className="bg-[#1a1a1a] hover:bg-[#2a2a2a] transition-colors rounded-lg px-4 py-2 cursor-pointer">
+                          <div className="text-sm text-gray-400">See Enrolled Students</div>
+                          <div className="text-lg font-semibold text-orange-400 flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {course.totalStudents || 0}
+                          </div>
+                        </div>
+                      </Link>
                     </div>
                   </div>
                 </Card>

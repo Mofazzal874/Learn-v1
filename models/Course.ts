@@ -82,6 +82,10 @@ const courseSchema = new Schema({
     review: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
   }],
+  enrolledUsers: [{ 
+    type: mongoose.Types.ObjectId, 
+    ref: 'User' 
+  }],
   requirements: [{ type: String }],
   welcomeMessage: { type: String },
   completionMessage: { type: String }
