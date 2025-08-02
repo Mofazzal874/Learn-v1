@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, BookOpen, ArrowRight, Loader2 } from "lucide-react";
 import DirectUploader from './DirectUploader';
+import { getCategoryOptions } from '@/lib/categories';
 
 interface CloudinaryAsset {
   secure_url: string;
@@ -157,11 +158,12 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
                   <SelectTrigger className="mt-2 bg-[#0a0a0a] border-gray-800 text-white">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-gray-800">
-                    <SelectItem value="programming" className="text-white">Programming</SelectItem>
-                    <SelectItem value="design" className="text-white">Design</SelectItem>
-                    <SelectItem value="business" className="text-white">Business</SelectItem>
-                    <SelectItem value="marketing" className="text-white">Marketing</SelectItem>
+                  <SelectContent className="bg-[#1a1a1a] border-gray-800 max-h-60">
+                    {getCategoryOptions().map((category) => (
+                      <SelectItem key={category.value} value={category.value} className="text-white">
+                        {category.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

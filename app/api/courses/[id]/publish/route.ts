@@ -62,6 +62,7 @@ export async function PATCH(
 
     // Update course status
     course.published = true;
+    course.approved = true; // Auto-approve when publishing for now
     await course.save();
 
     // Return success JSON response instead of redirecting

@@ -68,12 +68,18 @@ const courseSchema = new Schema({
   published: { type: Boolean, default: false },
   approved: { type: Boolean, default: false },
   rating: { type: Number, default: 0 },
+  totalRatings: { type: Number, default: 0 },
   totalStudents: { type: Number, default: 0 },
   totalReviews: { type: Number, default: 0 },
+  ratings: [{
+    userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    createdAt: { type: Date, default: Date.now }
+  }],
   reviews: [{
-    userId: { type: mongoose.Types.ObjectId, ref: 'User' },
-    rating: { type: Number, required: true },
-    review: { type: String },
+    userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    review: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
   }],
   requirements: [{ type: String }],
@@ -85,7 +91,6 @@ const courseSchema = new Schema({
 
 // Create indexes
 courseSchema.index({ title: 'text', description: 'text', tags: 'text' });
-courseSchema.index({ slug: 1 });
 courseSchema.index({ tutorId: 1 });
 courseSchema.index({ category: 1 });
 courseSchema.index({ published: 1, approved: 1 });

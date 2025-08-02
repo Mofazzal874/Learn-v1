@@ -57,7 +57,7 @@ export async function uploadVideo(base64Video: string, folder: string = 'courses
     // First, set a reasonable chunk size and quality to avoid buffer issues
     const uploadOptions = {
       folder: folder,
-      resource_type: 'video',
+      resource_type: 'video' as const,
       chunk_size: 6000000, // 6 MB chunks
       eager: [
         { format: 'mp4', quality: 'auto:low' } // Lower initial quality to avoid buffer issues

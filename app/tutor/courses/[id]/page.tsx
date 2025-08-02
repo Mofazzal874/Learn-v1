@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import PublishUnpublishButtons from "./PublishUnpublishButtons";
 import { 
   BookOpen, 
   Users, 
@@ -393,21 +394,10 @@ export default async function TutorCourseDetails({ params }: { params: { id: str
                       Edit Details
                     </Button>
                   </Link>
-                  {course.published ? (
-                    <form action={`/api/courses/${params.id}/unpublish`}>
-                      <Button type="submit" className="w-full bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Unpublish Course
-                      </Button>
-                    </form>
-                  ) : (
-                    <form action={`/api/courses/${params.id}/publish`}>
-                      <Button type="submit" className="w-full bg-green-500/10 text-green-400 hover:bg-green-500/20">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Publish Course
-                      </Button>
-                    </form>
-                  )}
+                  <PublishUnpublishButtons 
+                    courseId={params.id} 
+                    published={course.published} 
+                  />
                   <form action={`/api/courses/${params.id}/delete`} method="POST">
                     <Button type="submit" className="w-full bg-red-500/10 text-red-400 hover:bg-red-500/20">
                       <Edit className="h-4 w-4 mr-2" />
