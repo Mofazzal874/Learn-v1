@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/getSession";
 import connectDB, { mongoose } from "@/lib/db";
 import { RoadmapNode, RoadmapEdge } from "@/types";
+import { processRoadmapEmbedding, deleteRoadmapEmbedding } from "@/lib/embedding";
 
 // Define the Roadmap schema
 const RoadmapSchema = new mongoose.Schema({
@@ -223,12 +224,17 @@ export async function PUT(req: Request) {
     }
     
     console.log(`[UPDATE_SAVED_ROADMAP] Successfully updated roadmap: ${updatedRoadmap.name}`);
+    
+    // Process embeddings asynchronously for the update
+    processEmbeddingsAsync(updatedRoadmap, session.user.id);
+    
     return NextResponse.json({
       success: true,
       id: updatedRoadmap._id,
       name: updatedRoadmap.name,
       nodeCount: validatedNodes.length,
-      edgeCount: validatedEdges.length
+      edgeCount: validatedEdges.length,
+      embeddingStatus: "processing"
     });
   } catch (error: any) {
     console.error("[UPDATE_SAVED_ROADMAP] Error:", error);
@@ -285,6 +291,10 @@ export async function DELETE(req: Request) {
     }
     
     console.log(`[DELETE_SAVED_ROADMAP] Successfully deleted roadmap: ${result.name}`);
+    
+    // Clean up embeddings asynchronously (don't wait for completion)
+    deleteEmbeddingsAsync(id, session.user.id);
+    
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[DELETE_SAVED_ROADMAP] Error:", error);
@@ -295,5 +305,43 @@ export async function DELETE(req: Request) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+}
+
+// Async function to process embeddings without blocking the response
+async function processEmbeddingsAsync(roadmap: any, userId: string) {
+  try {
+    console.log(`[UPDATE_SAVED_ROADMAP] Starting async embedding processing for roadmap ${roadmap._id}`);
+    
+    // Convert the mongoose document to a plain object that matches IRoadmap interface
+    const roadmapData = {
+      _id: roadmap._id,
+      title: roadmap.name, // Note: saved roadmaps use 'name' but IRoadmap expects 'title'
+      level: roadmap.level || "beginner", // Provide default if not available
+      roadmapType: roadmap.roadmapType || "topic-wise", // Provide default if not available
+      nodes: roadmap.nodes || [],
+      edges: roadmap.edges || [],
+      userId: roadmap.userId,
+      createdAt: roadmap.createdAt,
+      updatedAt: roadmap.updatedAt
+    };
+    
+    await processRoadmapEmbedding(roadmapData, userId);
+    console.log(`[UPDATE_SAVED_ROADMAP] Embedding processing completed for roadmap ${roadmap._id}`);
+  } catch (error) {
+    console.error(`[UPDATE_SAVED_ROADMAP] Embedding processing failed for roadmap ${roadmap._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main save operation
+  }
+}
+
+// Async function to clean up embeddings when roadmap is deleted
+async function deleteEmbeddingsAsync(roadmapId: string, userId: string) {
+  try {
+    console.log(`[DELETE_SAVED_ROADMAP] Starting async embedding cleanup for roadmap ${roadmapId}`);
+    await deleteRoadmapEmbedding(roadmapId, userId);
+    console.log(`[DELETE_SAVED_ROADMAP] Embedding cleanup completed for roadmap ${roadmapId}`);
+  } catch (error) {
+    console.error(`[DELETE_SAVED_ROADMAP] Embedding cleanup failed for roadmap ${roadmapId}:`, error);
+    // Don't throw - this is async cleanup
   }
 }

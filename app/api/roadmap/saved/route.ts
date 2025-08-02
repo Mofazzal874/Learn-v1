@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/getSession";
 import connectDB, { mongoose } from "@/lib/db";
+import { processRoadmapEmbedding } from "@/lib/embedding";
 
 // Define the Roadmap schema
 const RoadmapSchema = new mongoose.Schema({
@@ -175,10 +176,15 @@ export async function POST(req: Request) {
     });
     
     console.log(`[ROADMAP_SAVED] Successfully created roadmap with ID: ${roadmap._id}`);
+    
+    // Process embeddings asynchronously - don't wait for completion
+    processEmbeddingsAsync(roadmap, session.user.id);
+    
     return NextResponse.json({
       success: true,
       id: roadmap._id,
       name: roadmap.name,
+      embeddingStatus: "processing"
     });
   } catch (error) {
     console.error("[ROADMAP_SAVED] Error:", error);
@@ -189,5 +195,31 @@ export async function POST(req: Request) {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
+  }
+}
+
+// Async function to process embeddings without blocking the response
+async function processEmbeddingsAsync(roadmap: any, userId: string) {
+  try {
+    console.log(`[ROADMAP_SAVED] Starting async embedding processing for roadmap ${roadmap._id}`);
+    
+    // Convert the mongoose document to a plain object that matches IRoadmap interface
+    const roadmapData = {
+      _id: roadmap._id,
+      title: roadmap.name, // Note: saved roadmaps use 'name' but IRoadmap expects 'title'
+      level: roadmap.level || "beginner", // Provide default if not available
+      roadmapType: roadmap.roadmapType || "topic-wise", // Provide default if not available
+      nodes: roadmap.nodes || [],
+      edges: roadmap.edges || [],
+      userId: roadmap.userId,
+      createdAt: roadmap.createdAt,
+      updatedAt: roadmap.updatedAt
+    };
+    
+    await processRoadmapEmbedding(roadmapData, userId);
+    console.log(`[ROADMAP_SAVED] Embedding processing completed for roadmap ${roadmap._id}`);
+  } catch (error) {
+    console.error(`[ROADMAP_SAVED] Embedding processing failed for roadmap ${roadmap._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main save operation
   }
 } 

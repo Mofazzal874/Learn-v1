@@ -103,7 +103,7 @@ Only the raw JSON is allowed in your response.`;
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "mistral-saba-24b",
+        model: "qwen/qwen3-32b",
         messages: [
           {
             role: "system",
