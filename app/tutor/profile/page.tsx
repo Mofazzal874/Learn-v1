@@ -340,21 +340,21 @@ export default function TutorProfilePage() {
                   <div className="text-sm text-gray-400">Total Students</div>
                   <div className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-blue-400" />
-                    1,234
+                    {tutorStats?.totalStudents? tutorStats.totalStudents : 0}
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-[#1a1a1a] border border-gray-800">
                   <div className="text-sm text-gray-400">Active Courses</div>
                   <div className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
                     <GraduationCap className="w-5 h-5 text-green-400" />
-                    8
+                    {tutorStats?.activeCourses? tutorStats.activeCourses : 0}
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-[#1a1a1a] border border-gray-800">
                   <div className="text-sm text-gray-400">Average Rating</div>
                   <div className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-400" />
-                    4.8
+                    {tutorStats?.avgRating? tutorStats.avgRating:0}
                   </div>
                 </div>
               </div>

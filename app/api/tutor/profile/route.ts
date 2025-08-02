@@ -27,10 +27,23 @@ export async function GET(req: NextRequest) {
    const activeCourses = courses.filter(course => course.published && course.approved).length;
 
    let totalRating = 0;
-   let totalRatingsCount = 0;
+   let coursesWithRatings = 0;
+
+   courses.forEach(course => {
+    if(course.rating && course.rating>0)
+    {
+        totalRating+=course.rating;
+        coursesWithRatings++;
+    }
+   });
+
+   const avgRating = coursesWithRatings > 0 ? (totalRating/coursesWithRatings).toFixed(1) : 0;
 
    const tutorStats = {
-    user
+    user,
+    totalStudents,
+    activeCourses,
+    avgRating
    }
 
     return new Response(JSON.stringify(tutorStats), { status: 200 });
