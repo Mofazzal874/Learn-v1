@@ -26,18 +26,18 @@ export async function GET(req: NextRequest) {
 
    const activeCourses = courses.filter(course => course.published && course.approved).length;
 
-   let totalRating = 0;
-   let coursesWithRatings = 0;
+   let totalRatings = 0;
+   let totalRatingSum = 0;
 
    courses.forEach(course => {
     if(course.rating && course.rating>0)
     {
-        totalRating+=course.rating;
-        coursesWithRatings++;
+      totalRatings += course.totalRatings || 0;
+      totalRatingSum += (course.rating || 0) * (course.totalRatings || 0);
     }
    });
 
-   const avgRating = coursesWithRatings > 0 ? (totalRating/coursesWithRatings).toFixed(1) : 0;
+   const avgRating = totalRatings > 0 ? (totalRatingSum / totalRatings).toFixed(1) : 0;
 
    const tutorStats = {
     user,
