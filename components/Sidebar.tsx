@@ -51,9 +51,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
       title: 'Main',
       items: [
         { icon: Home, label: 'Dashboard', href: '/tutor/dashboard' },
-        { icon: LineChart, label: 'Analytics', href: '/tutor/analytics' },
-         { icon: Video, label: 'My Videos', href: '/private/videos' },
-        { icon: Upload, label: 'Upload Video', href: '/private/videos/new' },
+        // { icon: LineChart, label: 'Analytics', href: '/tutor/analytics' },
+        //  { icon: Video, label: 'My Videos', href: '/private/videos' },
+        // { icon: Upload, label: 'Upload Video', href: '/private/videos/new' },
         { icon: BookOpen, label: 'My Courses', href: '/tutor/courses' },
         { icon: PlusCircle, label: 'Create Course', href: '/tutor/courses/new' },
         { icon: Video, label: 'My Videos', href: '/tutor/videos' },

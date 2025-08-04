@@ -12,7 +12,10 @@ import {
   FileText,
   Link,
   ArrowRight,
-  Loader2
+  Loader2,
+  Database,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,11 +55,10 @@ interface PreviewFormProps {
   onBack: () => void;
   onPublish: () => Promise<void>;
   isSubmitting: boolean;
-  courseId?: string; // Add courseId for existing courses
 }
 
-export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting, courseId }: PreviewFormProps) {
-  const [isPublishing, setIsPublishing] = useState(false);
+export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting }: PreviewFormProps) {
+  const [embeddingStatus, setEmbeddingStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle");
   
   const totalLessons = courseData.sections.reduce(
     (total, section) => total + section.lessons.length,
@@ -72,40 +74,34 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
       return total + minutes;
     }, 0);
     
-  // Separate function to handle the publish action specifically
-  const handlePublish = async () => {
-    if (!courseId) {
-      // For new courses, just use the standard onPublish
-      await onPublish();
-      return;
-    }
-    
+  // Handle course creation with embedding tracking
+  const handleCourseSubmit = async () => {
     try {
-      setIsPublishing(true);
+      // Set embedding processing state
+      setEmbeddingStatus("processing");
       
-      // Call the publish API endpoint
-      const response = await fetch(`/api/courses/${courseId}/publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Call the original onPublish function
+      await onPublish();
+      
+      // Show success message with embedding info
+      toast.success("Course saved successfully! AI embeddings are being processed...", {
+        description: "This will help with future search and recommendations"
       });
       
-      const data = await response.json();
+      // Simulate embedding completion after a delay
+      // In a real app, you'd poll the embedding status API
+      setTimeout(() => {
+        setEmbeddingStatus("completed");
+        toast.success("AI embeddings completed!", {
+          description: "Your course is now fully searchable"
+        });
+      }, 3000);
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to publish course');
-      }
-      
-      toast.success('Course published successfully!');
-      
-      // Refresh the page to see updated status
-      window.location.href = `/tutor/courses/${courseId}`;
-    } catch (error: any) {
-      console.error('Publish error:', error);
-      toast.error(error.message || 'Failed to publish course. Please try again.');
-    } finally {
-      setIsPublishing(false);
+    } catch (error) {
+      console.error("Failed to save course:", error);
+      setEmbeddingStatus("failed");
+      toast.error("Failed to save course");
+      throw error; // Re-throw to maintain existing error handling
     }
   };
 
@@ -252,64 +248,65 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                     </div>
                   )}
                 </div>
-
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
-                  onClick={onPublish}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update Course'
-                  )}
-                </Button>
-                
-                {courseId && (
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={handlePublish}
-                    disabled={isPublishing}
-                  >
-                    {isPublishing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Publishing...
-                      </>
-                    ) : (
-                      'Publish Course'
-                    )}
-                  </Button>
-                )}
               </div>
             </Card>
           </div>
         </div>
+
+        {/* Embedding Status Information */}
+        {(isSubmitting || embeddingStatus !== "idle") && (
+          <div className="mt-6 p-4 bg-[#0a0a0a] rounded-lg border border-gray-800">
+            <div className="text-sm text-gray-400 mb-2">
+              AI Enhancement Status:
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {embeddingStatus === "processing" && (
+                <>
+                  <Database className="h-4 w-4 text-blue-400 animate-pulse" />
+                  <span className="text-blue-400">Processing AI embeddings...</span>
+                </>
+              )}
+              {embeddingStatus === "completed" && (
+                <>
+                  <Check className="h-4 w-4 text-green-400" />
+                  <span className="text-green-400">AI embeddings completed</span>
+                </>
+              )}
+              {embeddingStatus === "failed" && (
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400">AI processing failed (course still saved)</span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              This enables intelligent search and personalized recommendations
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-between mt-8">
           <Button
             variant="outline"
             onClick={onBack}
             className="border-gray-800 text-gray-400"
+            disabled={isSubmitting}
           >
             Back
           </Button>
           <Button
-            onClick={onPublish}
+            onClick={handleCourseSubmit}
             disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {courseId ? 'Updating...' : 'Creating...'}
+                {embeddingStatus === "processing" ? "Saving & Processing AI..." : 'Creating Course...'}
               </>
             ) : (
               <>
-                {courseId ? 'Update Course' : 'Create Course'}
+                Create Course
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}

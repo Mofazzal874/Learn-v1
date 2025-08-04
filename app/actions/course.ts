@@ -6,6 +6,7 @@ import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { uploadImage, uploadVideo, CloudinaryUploadResult } from "@/lib/cloudinary";
+import { processCourseEmbedding } from "@/lib/course-embedding";
 
 export interface CloudinaryAsset {
   secure_url: string;
@@ -178,6 +179,7 @@ export async function createCourse({
     });
 
     // Create the course using Mongoose
+    console.log(`[CREATE_COURSE_ACTION] Creating course "${courseData.title}" for user ${session.user.id}`);
     const course = await Course.create({
       title: courseData.title,
       subtitle: courseData.subtitle || '',
@@ -199,6 +201,11 @@ export async function createCourse({
       published: false,
       approved: false
     });
+
+    console.log(`[CREATE_COURSE_ACTION] Course created successfully with ID: ${course._id}`);
+
+    // Process embeddings asynchronously - don't wait for completion
+    processCourseEmbeddingsAsync(course, session.user.id);
 
     return course._id.toString();
   } catch (error) {
@@ -622,4 +629,35 @@ async function fileToBase64(file: any): Promise<string | null> {
       resolve(null); // Resolve with null instead of rejecting to avoid crashes
     }
   });
+}
+
+// Async function to process course embeddings without blocking the response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processCourseEmbeddingsAsync(course: any, userId: string) {
+  try {
+    console.log(`[CREATE_COURSE_ACTION] Starting async embedding processing for course ${course._id}`);
+    
+    // Convert the mongoose document to a plain object for processing
+    const courseData = {
+      _id: course._id,
+      title: course.title,
+      subtitle: course.subtitle,
+      description: course.description,
+      category: course.category,
+      level: course.level,
+      sections: course.sections || [],
+      outcomes: course.outcomes || [],
+      prerequisites: course.prerequisites || [],
+      tags: course.tags || [],
+      tutorId: course.tutorId,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt
+    };
+    
+    await processCourseEmbedding(courseData, userId);
+    console.log(`[CREATE_COURSE_ACTION] Embedding processing completed for course ${course._id}`);
+  } catch (error) {
+    console.error(`[CREATE_COURSE_ACTION] Embedding processing failed for course ${course._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main course creation operation
+  }
 }
