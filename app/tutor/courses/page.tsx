@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { Card } from "@/components/ui/card";
-import { BookOpen, MoreVertical, Users, Star, Eye, Edit, Trash2, PlusCircle } from "lucide-react";
+import { BookOpen, MoreVertical, Users, Star, Eye, Edit, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
 import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import { redirect } from "next/navigation";
+import DeleteCourseButton from "./components/DeleteCourseButton";
 
 // Function to get courses from the database
 async function getTutorCourses(userId: string) {
@@ -58,7 +59,8 @@ export default async function TutorCourses() {
                 </Link>
               </div>
             ) : (
-              courses.map((course) => (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              courses.map((course: any) => (
                 <Card key={course._id} className="bg-[#141414] border-gray-800">
                   <div className="p-6">
                     <div className="flex items-start justify-between">
@@ -121,14 +123,11 @@ export default async function TutorCourses() {
                             </Link>
                           </DropdownMenuItem>
 
-                          <form action={`/api/courses/${course._id}/delete`}>
-                            <DropdownMenuItem className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-900/20">
-                              <button type="submit" className="flex w-full items-center">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </button>
-                            </DropdownMenuItem>
-                          </form>
+                          <DeleteCourseButton 
+                            courseId={course._id} 
+                            courseName={course.title}
+                            variant="dropdown"
+                          />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

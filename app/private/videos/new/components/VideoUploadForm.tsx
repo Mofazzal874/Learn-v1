@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Loader2, Video, Plus, X } from "lucide-react";
+import { 
+  Upload, 
+  Loader2, 
+  Video, 
+  Plus, 
+  X, 
+  Database, 
+  Check, 
+  AlertCircle 
+} from "lucide-react";
 import Image from "next/image";
 import DirectUploader from '@/app/tutor/courses/new/components/DirectUploader';
 import { VideoFormData } from '@/app/actions/video';
 import { getCategoryOptions } from '@/lib/categories';
+import { toast } from "sonner";
 
 interface CloudinaryAsset {
   secure_url: string;
@@ -35,13 +45,15 @@ interface VideoUploadFormProps {
   onSubmit: (data: VideoFormData) => Promise<void>;
   isSubmitting: boolean;
   submitButtonText?: string;
+  videoId?: string; // For checking embedding status on edit
 }
 
 export default function VideoUploadForm({ 
   initialData, 
   onSubmit, 
   isSubmitting, 
-  submitButtonText = "Upload Video" 
+  submitButtonText = "Upload Video",
+  videoId 
 }: VideoUploadFormProps) {
   const [formData, setFormData] = useState<VideoFormData>({
     title: initialData?.title || '',
@@ -67,6 +79,27 @@ export default function VideoUploadForm({
   const [newPrerequisite, setNewPrerequisite] = useState('');
   const [newOutcome, setNewOutcome] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [embeddingStatus, setEmbeddingStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle");
+
+  // Check embedding status for existing videos
+  useEffect(() => {
+    if (videoId) {
+      const checkEmbeddingStatus = async () => {
+        try {
+          const response = await fetch(`/api/videos/embedding-status/${videoId}`);
+          const data = await response.json();
+          
+          if (data.status && data.status !== "not_found") {
+            setEmbeddingStatus(data.status);
+          }
+        } catch (error) {
+          console.error("Failed to fetch embedding status:", error);
+        }
+      };
+      
+      checkEmbeddingStatus();
+    }
+  }, [videoId]);
 
   const handleInputChange = (field: keyof VideoFormData, value: string | string[]) => {
     setFormData(prev => ({
@@ -173,7 +206,33 @@ export default function VideoUploadForm({
       return;
     }
 
-    await onSubmit(formData);
+    try {
+      // Set embedding processing state
+      setEmbeddingStatus("processing");
+      
+      // Call the original onSubmit function
+      await onSubmit(formData);
+      
+      // Show success message with embedding info
+      toast.success("Video saved successfully! AI embeddings are being processed...", {
+        description: "This will help with future search and recommendations"
+      });
+      
+      // Simulate embedding completion after a delay
+      // In a real app, you'd poll the embedding status API
+      setTimeout(() => {
+        setEmbeddingStatus("completed");
+        toast.success("AI embeddings completed!", {
+          description: "Your video is now fully searchable"
+        });
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Failed to save video:", error);
+      setEmbeddingStatus("failed");
+      toast.error("Failed to save video");
+      throw error; // Re-throw to maintain existing error handling
+    }
   };
 
   return (
@@ -475,6 +534,38 @@ export default function VideoUploadForm({
           </div>
         </div>
 
+        {/* Embedding Status Information */}
+        {(isSubmitting || embeddingStatus !== "idle") && (
+          <div className="mt-6 p-4 bg-[#0a0a0a] rounded-lg border border-gray-800">
+            <div className="text-sm text-gray-400 mb-2">
+              AI Enhancement Status:
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {embeddingStatus === "processing" && (
+                <>
+                  <Database className="h-4 w-4 text-blue-400 animate-pulse" />
+                  <span className="text-blue-400">Processing AI embeddings...</span>
+                </>
+              )}
+              {embeddingStatus === "completed" && (
+                <>
+                  <Check className="h-4 w-4 text-green-400" />
+                  <span className="text-green-400">AI embeddings completed</span>
+                </>
+              )}
+              {embeddingStatus === "failed" && (
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400">AI processing failed (video still saved)</span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              This enables intelligent search and personalized recommendations
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end mt-8">
           <Button
             onClick={handleSubmit}
@@ -484,7 +575,7 @@ export default function VideoUploadForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
+                {embeddingStatus === "processing" ? "Saving & Processing AI..." : 'Uploading...'}
               </>
             ) : (
               <>

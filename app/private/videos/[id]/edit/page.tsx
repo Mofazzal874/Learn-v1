@@ -136,6 +136,7 @@ export default function EditVideoPage({ params }: { params: { id: string } }) {
           onSubmit={handleUpdateVideo}
           isSubmitting={isSubmitting}
           submitButtonText="Update Video"
+          videoId={video._id}
         />
       </div>
     </div>
