@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import connectDB from "@/lib/db";
 import { Video } from "@/models/Video";
 import { uploadImage, uploadVideo, CloudinaryUploadResult } from "@/lib/cloudinary";
+import { processVideoEmbedding, deleteVideoEmbedding } from "@/lib/video-embedding";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 
@@ -111,6 +112,7 @@ export async function createVideo(videoData: VideoFormData): Promise<string> {
       '0:00';
 
     // Create the video using Mongoose
+    console.log(`[CREATE_VIDEO_ACTION] Creating video "${videoData.title}" for user ${session.user.id}`);
     const video = await Video.create({
       title: videoData.title,
       subtitle: videoData.subtitle || '',
@@ -131,6 +133,11 @@ export async function createVideo(videoData: VideoFormData): Promise<string> {
       duration,
       published: false
     });
+
+    console.log(`[CREATE_VIDEO_ACTION] Video created successfully with ID: ${video._id}`);
+
+    // Process embeddings asynchronously - don't wait for completion
+    processVideoEmbeddingsAsync(video, session.user.id);
 
     revalidatePath('/private/videos');
     revalidatePath('/tutor/videos');
@@ -209,7 +216,20 @@ export async function updateVideo(videoId: string, videoData: Partial<VideoFormD
       duration = `${Math.floor(videoResult.duration / 60)}:${Math.floor(videoResult.duration % 60).toString().padStart(2, '0')}`;
     }
 
+    // Check if embedding-related fields changed
+    const hasEmbeddingRelevantChanges = 
+      videoData.title || 
+      videoData.subtitle !== undefined || 
+      videoData.description || 
+      videoData.category || 
+      videoData.subcategory !== undefined || 
+      videoData.level || 
+      videoData.prerequisites || 
+      videoData.outcomes || 
+      videoData.tags;
+
     // Update the video
+    console.log(`[UPDATE_VIDEO_ACTION] Updating video ${videoId} for user ${session.user.id}`);
     await Video.findByIdAndUpdate(videoId, {
       ...(videoData.title && { title: videoData.title }),
       ...(videoData.subtitle !== undefined && { subtitle: videoData.subtitle }),
@@ -232,6 +252,17 @@ export async function updateVideo(videoId: string, videoData: Partial<VideoFormD
         duration 
       }),
     });
+
+    console.log(`[UPDATE_VIDEO_ACTION] Video updated successfully: ${videoId}`);
+
+    // Process embeddings asynchronously if embedding-relevant fields changed
+    if (hasEmbeddingRelevantChanges) {
+      // Fetch the updated video and process embeddings
+      const updatedVideo = await Video.findById(videoId);
+      if (updatedVideo) {
+        processVideoEmbeddingsAsync(updatedVideo, session.user.id);
+      }
+    }
 
     revalidatePath('/private/videos');
     revalidatePath('/tutor/videos');
@@ -269,8 +300,14 @@ export async function deleteVideo(videoId: string): Promise<void> {
       throw new Error('Unauthorized - You can only delete your own videos');
     }
 
+    // Delete embeddings asynchronously before deleting video
+    deleteVideoEmbeddingsAsync(videoId, session.user.id);
+    
     // Delete the video
+    console.log(`[DELETE_VIDEO_ACTION] Deleting video ${videoId} for user ${session.user.id}`);
     await Video.findByIdAndDelete(videoId);
+
+    console.log(`[DELETE_VIDEO_ACTION] Video deleted successfully: ${videoId}`);
 
     revalidatePath('/private/videos');
     revalidatePath('/tutor/videos');
@@ -391,5 +428,50 @@ export async function incrementVideoViews(videoId: string): Promise<void> {
   } catch (error) {
     console.error("Video view increment error:", error);
     // Don't throw error for view increments as it's not critical
+  }
+}
+
+// Async function to process video embeddings without blocking the response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processVideoEmbeddingsAsync(video: any, userId: string) {
+  try {
+    console.log(`[CREATE_VIDEO_ACTION] Starting async embedding processing for video ${video._id}`);
+    
+    // Convert the mongoose document to a plain object for processing
+    const videoData = {
+      _id: video._id,
+      title: video.title,
+      subtitle: video.subtitle,
+      description: video.description,
+      category: video.category,
+      subcategory: video.subcategory,
+      level: video.level,
+      prerequisites: video.prerequisites || [],
+      outcomes: video.outcomes || [],
+      tags: video.tags || [],
+      language: video.language,
+      duration: video.duration,
+      userId: video.userId,
+      createdAt: video.createdAt,
+      updatedAt: video.updatedAt
+    };
+    
+    await processVideoEmbedding(videoData, userId);
+    console.log(`[CREATE_VIDEO_ACTION] Embedding processing completed for video ${video._id}`);
+  } catch (error) {
+    console.error(`[CREATE_VIDEO_ACTION] Embedding processing failed for video ${video._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main video creation operation
+  }
+}
+
+// Async function to delete video embeddings without blocking the response
+async function deleteVideoEmbeddingsAsync(videoId: string, userId: string) {
+  try {
+    console.log(`[DELETE_VIDEO_ACTION] Starting async embedding deletion for video ${videoId}`);
+    await deleteVideoEmbedding(videoId, userId);
+    console.log(`[DELETE_VIDEO_ACTION] Embedding deletion completed for video ${videoId}`);
+  } catch (error) {
+    console.error(`[DELETE_VIDEO_ACTION] Embedding deletion failed for video ${videoId}:`, error);
+    // Don't throw - this is async and shouldn't affect the main video deletion operation
   }
 }
