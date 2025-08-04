@@ -23,8 +23,28 @@ interface PreviewFormProps {
     description: string;
     category: string;
     level: string;
-    thumbnail: string | null;
-    previewVideo: string | null;
+    thumbnail: File | null;
+    previewVideo: File | null;
+    thumbnailAsset?: {
+      secure_url: string;
+      public_id: string;
+      resource_type: string;
+      format: string;
+      duration?: number;
+      bytes: number;
+      width?: number;
+      height?: number;
+    };
+    previewVideoAsset?: {
+      secure_url: string;
+      public_id: string;
+      resource_type: string;
+      format: string;
+      duration?: number;
+      bytes: number;
+      width?: number;
+      height?: number;
+    };
     certificate: boolean;
     sections: Array<{
       id: string;
@@ -109,6 +129,23 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
     }
   };
 
+  // Helper function to get thumbnail URL
+  const getThumbnailUrl = () => {
+    if (courseData.thumbnailAsset?.secure_url) {
+      return courseData.thumbnailAsset.secure_url;
+    }
+   
+    return undefined;
+  };
+
+  // Helper function to get preview video URL
+  const getPreviewVideoUrl = () => {
+    if (courseData.previewVideoAsset?.secure_url) {
+      return courseData.previewVideoAsset.secure_url;
+    }
+    return undefined;
+  };
+
   return (
     <Card className="bg-[#141414] border-gray-800 max-w-4xl mx-auto">
       <div className="p-6">
@@ -119,9 +156,16 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
 
         {/* Course Header */}
         <div className="relative rounded-lg overflow-hidden mb-6">
-          {courseData.thumbnail ? (
+        {getPreviewVideoUrl() ? (
+            <video 
+              className="w-full h-64 object-cover" 
+              src={getPreviewVideoUrl()!} 
+              controls 
+              poster={getThumbnailUrl()}
+            />
+          ) : getThumbnailUrl() ? (
             <img
-              src={courseData.thumbnail}
+              src={getThumbnailUrl()!}
               alt={courseData.title}
               className="w-full h-64 object-cover"
             />

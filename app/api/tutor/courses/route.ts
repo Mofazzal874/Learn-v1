@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
       category: courseData.category,
       level: courseData.level,
       certificate: courseData.certificate,
+      prerequisites: courseData.prerequisites || [], 
+      outcomes: courseData.outcomes || [], 
       sections: processedSections,
       published: false,
       approved: false

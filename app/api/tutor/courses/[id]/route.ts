@@ -79,9 +79,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get update data
-    const data = await req.json();
-    const { courseData, sections, pricing } = data;
+    // Replace lines 82-84 with:
+const formData = await req.formData();
+
+// Extract basic course data
+const courseData = {
+  title: formData.get('title') as string,
+  subtitle: formData.get('subtitle') as string,
+  description: formData.get('description') as string,
+  category: formData.get('category') as string,
+  level: formData.get('level') as string,
+  certificate: formData.get('certificate') === 'true',
+  thumbnail: formData.get('thumbnail') as string,
+  previewVideo: formData.get('previewVideo') as string,
+  prerequisites: (formData.get('prerequisites') as string || '').split(',').filter(item => item.trim()),
+  outcomes: (formData.get('outcomes') as string || '').split(',').filter(item => item.trim()),
+};
+
+// Extract sections and pricing data
+const sections = JSON.parse(formData.get('sections') as string || '[]');
+const pricing = JSON.parse(formData.get('pricing') as string || '{}');
 
     // Handle media uploads if new files are provided
     let thumbnailResult = course.thumbnailAsset;
@@ -146,6 +163,8 @@ export async function PUT(
         discountedPrice,
         discountEnds,
         certificate: courseData.certificate,
+        prerequisites: JSON.parse(formData.get('prerequisites') as string || '[]'),
+        outcomes: JSON.parse(formData.get('outcomes') as string || '[]'),
         sections: processedSections,
       },
       { new: true }

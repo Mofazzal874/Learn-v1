@@ -37,6 +37,8 @@ interface CourseFormData {
   thumbnailAsset?: CloudinaryAsset;
   previewVideoAsset?: CloudinaryAsset;
   certificate: boolean;
+  prerequisites: string[];
+  outcomes: string[];
 }
 
 interface Section {
@@ -80,6 +82,8 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
     thumbnail: null,
     previewVideo: null,
     certificate: false,
+    prerequisites: [''], // Add this
+    outcomes: [''], // Add this
   });
   const [curriculumData, setCurriculumData] = useState<Section[]>([]);
   const [pricingData, setPricingData] = useState<PricingData>({
@@ -114,6 +118,8 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
           thumbnailAsset: data.thumbnailAsset || undefined,
           previewVideoAsset: data.previewVideoAsset || undefined,
           certificate: data.certificate || false,
+          prerequisites: data.prerequisites || [''], 
+          outcomes: data.outcomes || [''], 
         });
 
         // Initialize curriculum data
@@ -197,6 +203,8 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
       formData.append('category', courseData.category || '');
       formData.append('level', courseData.level || '');
       formData.append('certificate', String(courseData.certificate || false));
+      formData.append('prerequisites', JSON.stringify(courseData.prerequisites || []));
+formData.append('outcomes', JSON.stringify(courseData.outcomes || []));
       
       // Handle thumbnail and video assets - ensure we only send valid JSON data
       if (courseData.thumbnailAsset) {
@@ -365,9 +373,10 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
               category: courseData.category,
               level: courseData.level,
               certificate: courseData.certificate,
+              prerequisites: courseData.prerequisites || [], // Add this
+              outcomes: courseData.outcomes || [], // Add this
               sections: curriculumData,
               pricing: pricingData,
-              // Use existing thumbnail and preview URLs without createObjectURL which can cause memory issues
               thumbnail: courseData.thumbnailAsset?.secure_url || null,
               previewVideo: courseData.previewVideoAsset?.secure_url || null
             }}
