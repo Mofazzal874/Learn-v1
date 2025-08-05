@@ -25,3 +25,25 @@ export interface RoadmapEdge {
   animated?: boolean;
   label?: string;
 }
+
+export interface SuggestedCourse {
+  courseId: string;
+  status: boolean;
+}
+
+export interface SuggestedVideo {
+  videoId: string;
+  status: boolean;
+}
+
+export interface CourseInfo {
+  _id: string;
+  title: string;
+  slug: string;
+}
+
+export interface VideoInfo {
+  _id: string;
+  title: string;
+  slug: string;
+}

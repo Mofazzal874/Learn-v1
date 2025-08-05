@@ -35,6 +35,14 @@ export interface IRoadmap extends Document {
   treeDirection: "top-down" | "bottom-up";
   nodes: IRoadmapNode[];
   edges: IRoadmapEdge[];
+  suggestedCourse: {
+    courseId: mongoose.Types.ObjectId;
+    status: boolean;
+  }[];
+  suggestedVideos: {
+    videoId: mongoose.Types.ObjectId;
+    status: boolean;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +81,14 @@ const RoadmapSchema: Schema = new Schema(
     treeDirection: { type: String, enum: ["top-down", "bottom-up"], default: "top-down" },
     nodes: [RoadmapNodeSchema],
     edges: [RoadmapEdgeSchema],
+    suggestedCourse: [{
+      courseId: { type: mongoose.Types.ObjectId, ref: "Course", required: true },
+      status: { type: Boolean, default: false }
+    }],
+    suggestedVideos: [{
+      videoId: { type: mongoose.Types.ObjectId, ref: "Video", required: true },
+      status: { type: Boolean, default: false }
+    }],
   },
   { timestamps: true }
 );
