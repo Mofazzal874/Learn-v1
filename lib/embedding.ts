@@ -33,6 +33,34 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
+ * Cleans node title by removing unwanted metadata suffixes
+ * Removes everything after the first digit that's not part of initial numbering
+ */
+function cleanNodeTitle(title: string): string {
+  if (!title) return title;
+  
+  // Handle initial numbering like "1. " or "10. "
+  const initialNumberMatch = title.match(/^\d+\.\s+/);
+  if (initialNumberMatch) {
+    // There's initial numbering, look for the first digit after it
+    const afterInitialNumber = title.substring(initialNumberMatch[0].length);
+    const firstDigitMatch = afterInitialNumber.match(/\d/);
+    if (firstDigitMatch && firstDigitMatch.index !== undefined) {
+      // Found a digit after the initial numbering, remove everything from that point
+      return (initialNumberMatch[0] + afterInitialNumber.substring(0, firstDigitMatch.index)).trim();
+    }
+    return title; // No problematic digits found
+  } else {
+    // No initial numbering, find the first digit and remove everything after it
+    const firstDigitMatch = title.match(/\d/);
+    if (firstDigitMatch && firstDigitMatch.index !== undefined) {
+      return title.substring(0, firstDigitMatch.index).trim();
+    }
+    return title; // No digits found
+  }
+}
+
+/**
  * Extracts and concatenates relevant text from roadmap data
  */
 export function extractRoadmapText(roadmap: any): string {
@@ -43,11 +71,7 @@ export function extractRoadmapText(roadmap: any): string {
     parts.push(`Title: ${roadmap.title}`);
   }
 
-  // Add metadata
-  parts.push(`Level: ${roadmap.level}`);
-  parts.push(`Type: ${roadmap.roadmapType}`);
-
-      // Process nodes with sequence weighting
+  // Process nodes with sequence weighting
   if (roadmap.nodes && roadmap.nodes.length > 0) {
     const sortedNodes = roadmap.nodes
       .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0));
@@ -55,7 +79,8 @@ export function extractRoadmapText(roadmap: any): string {
     // Add sequence-weighted titles (early nodes get more weight)
     const nodeTitles = sortedNodes.map((node: any, index: number) => {
       const weight = Math.max(1, sortedNodes.length - index);
-      const weightedTitle = Array(Math.min(weight, 3)).fill(node.title).join(' ');
+      const cleanedTitle = cleanNodeTitle(node.title);
+      const weightedTitle = Array(Math.min(weight, 3)).fill(cleanedTitle).join(' ');
       return weightedTitle;
     }).join(' ');
     
@@ -69,12 +94,6 @@ export function extractRoadmapText(roadmap: any): string {
     
     if (descriptions) {
       parts.push(`Content: ${descriptions}`);
-    }
-
-    // Add time-related information
-    const totalTime = sortedNodes.reduce((sum: number, node: any) => sum + (node.timeNeeded || 0), 0);
-    if (totalTime > 0) {
-      parts.push(`Estimated time: ${totalTime} hours`);
     }
   }
 

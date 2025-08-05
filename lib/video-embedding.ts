@@ -39,58 +39,47 @@ export function extractVideoText(video: any): string {
 
   // Add title (high importance)
   if (video.title) {
-    parts.push(`Title: ${video.title}`);
+    parts.push(video.title);
   }
 
   // Add subtitle
   if (video.subtitle) {
-    parts.push(`Subtitle: ${video.subtitle}`);
+    parts.push(video.subtitle);
   }
 
-  // Add description with HTML tag removal
+  // Add cleaned description
   if (video.description) {
     const cleanDescription = cleanHtmlText(video.description);
-    parts.push(`Description: ${cleanDescription}`);
+    parts.push(cleanDescription);
   }
 
-  // Add metadata
-  parts.push(`Category: ${video.category}`);
-  
-  if (video.subcategory) {
-    parts.push(`Subcategory: ${video.subcategory}`);
+  // Add category
+  if (video.category) {
+    parts.push(video.category);
   }
   
-  parts.push(`Level: ${video.level}`);
+  // Add subcategory if available
+  if (video.subcategory) {
+    parts.push(video.subcategory);
+  }
+  
+  // Add level
+  if (video.level) {
+    parts.push(video.level);
+  }
 
   // Add learning outcomes if available
   if (video.outcomes && video.outcomes.length > 0) {
     const outcomes = video.outcomes.join(' ');
-    parts.push(`Learning Outcomes: ${outcomes}`);
-  }
-
-  // Add prerequisites if available
-  if (video.prerequisites && video.prerequisites.length > 0) {
-    const prerequisites = video.prerequisites.join(' ');
-    parts.push(`Prerequisites: ${prerequisites}`);
-  }
-
-  // Add tags if available
-  if (video.tags && video.tags.length > 0) {
-    const tags = video.tags.join(' ');
-    parts.push(`Tags: ${tags}`);
+    parts.push(outcomes);
   }
 
   // Add language
   if (video.language) {
-    parts.push(`Language: ${video.language}`);
+    parts.push(video.language);
   }
 
-  // Add duration information
-  if (video.duration) {
-    parts.push(`Duration: ${video.duration}`);
-  }
-
-  return parts.join(' | ');
+  return parts.join(' ');
 }
 
 /**

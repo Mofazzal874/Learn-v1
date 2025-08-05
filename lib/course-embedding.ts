@@ -32,6 +32,24 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
+ * Cleans HTML tags and formatting from text
+ */
+export function cleanHtmlText(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, ' ')
+    // Remove common markdown/formatting
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markdown
+    .replace(/\*([^*]+)\*/g, '$1') // Remove italic markdown
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+    // Clean up whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Extracts and concatenates relevant text from course data
  */
 export function extractCourseText(course: any): string {
@@ -39,88 +57,51 @@ export function extractCourseText(course: any): string {
 
   // Add title (high importance)
   if (course.title) {
-    parts.push(`Title: ${course.title}`);
+    parts.push(course.title);
   }
 
   // Add subtitle
   if (course.subtitle) {
-    parts.push(`Subtitle: ${course.subtitle}`);
+    parts.push(course.subtitle);
   }
 
-  // Add description
+  // Add cleaned description
   if (course.description) {
-    parts.push(`Description: ${course.description}`);
+    const cleanDescription = cleanHtmlText(course.description);
+    parts.push(cleanDescription);
   }
 
-  // Add metadata
-  parts.push(`Category: ${course.category}`);
-  parts.push(`Level: ${course.level}`);
+  // Add category and level
+  if (course.category) {
+    parts.push(course.category);
+  }
+  
+  if (course.level) {
+    parts.push(course.level);
+  }
 
   // Add learning outcomes if available
   if (course.outcomes && course.outcomes.length > 0) {
     const outcomes = course.outcomes.join(' ');
-    parts.push(`Learning Outcomes: ${outcomes}`);
+    parts.push(outcomes);
   }
 
-  // Add prerequisites if available
-  if (course.prerequisites && course.prerequisites.length > 0) {
-    const prerequisites = course.prerequisites.join(' ');
-    parts.push(`Prerequisites: ${prerequisites}`);
-  }
-
-  // Process sections and lessons
+  // Process sections - only include section titles
   if (course.sections && course.sections.length > 0) {
     const sortedSections = course.sections
       .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
-    // Add section titles and descriptions
-    const sectionContent = sortedSections.map((section: any) => {
-      const sectionParts: string[] = [];
-      
-      if (section.title) {
-        sectionParts.push(`Section: ${section.title}`);
-      }
-      
-      if (section.description) {
-        sectionParts.push(`Section Description: ${section.description}`);
-      }
+    const sectionTitles = sortedSections
+      .map((section: any) => section.title)
+      .filter((title: any) => title && title.trim().length > 0)
+      .join(' ');
 
-      // Add lesson titles and descriptions
-      if (section.lessons && section.lessons.length > 0) {
-        const lessonTitles = section.lessons
-          .map((lesson: any) => lesson.title)
-          .filter((title: any) => title && title.trim().length > 0)
-          .join(' ');
-        
-        if (lessonTitles) {
-          sectionParts.push(`Lessons: ${lessonTitles}`);
-        }
-
-        const lessonDescriptions = section.lessons
-          .map((lesson: any) => lesson.description)
-          .filter((desc: any) => desc && desc.trim().length > 0)
-          .join(' ');
-        
-        if (lessonDescriptions) {
-          sectionParts.push(`Lesson Content: ${lessonDescriptions}`);
-        }
-      }
-
-      return sectionParts.join(' ');
-    }).join(' ');
-
-    if (sectionContent) {
-      parts.push(`Course Content: ${sectionContent}`);
+    if (sectionTitles) {
+      parts.push(sectionTitles);
     }
   }
 
-  // Add tags if available
-  if (course.tags && course.tags.length > 0) {
-    const tags = course.tags.join(' ');
-    parts.push(`Tags: ${tags}`);
-  }
-
-  return parts.join(' | ');
+  return parts.join(' ');
 }
 
 /**
