@@ -215,6 +215,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* Bottom spacing to prevent Save Roadmap button overlap */}
+        <div className="h-20"></div>
       </div>
     </div>
   );
