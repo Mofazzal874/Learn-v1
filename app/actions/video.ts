@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import connectDB from "@/lib/db";
 import { Video } from "@/models/Video";
-import { uploadImage, uploadVideo, CloudinaryUploadResult } from "@/lib/cloudinary";
+import { uploadImage, uploadVideo, deleteAsset, CloudinaryUploadResult } from "@/lib/cloudinary";
 import { processVideoEmbedding, deleteVideoEmbedding } from "@/lib/video-embedding";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
@@ -298,6 +298,35 @@ export async function deleteVideo(videoId: string): Promise<void> {
     // Check if user owns the video
     if (video.userId.toString() !== session.user.id) {
       throw new Error('Unauthorized - You can only delete your own videos');
+    }
+
+    // Delete Cloudinary assets first
+    const deletePromises = [];
+    
+    if (video.thumbnailAsset?.public_id) {
+      console.log(`[DELETE_VIDEO_ACTION] Deleting thumbnail from Cloudinary: ${video.thumbnailAsset.public_id}`);
+      deletePromises.push(deleteAsset(video.thumbnailAsset.public_id, 'image'));
+    }
+    
+    if (video.videoAsset?.public_id) {
+      console.log(`[DELETE_VIDEO_ACTION] Deleting video from Cloudinary: ${video.videoAsset.public_id}`);
+      deletePromises.push(deleteAsset(video.videoAsset.public_id, 'video'));
+    }
+    
+    // Execute Cloudinary deletions
+    if (deletePromises.length > 0) {
+      console.log(`[DELETE_VIDEO_ACTION] Executing ${deletePromises.length} Cloudinary deletion(s)`);
+      const results = await Promise.allSettled(deletePromises);
+      
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const assetType = index === 0 ? 'thumbnail' : 'video';
+          console.log(`[DELETE_VIDEO_ACTION] Successfully deleted ${assetType} from Cloudinary`);
+        } else {
+          const assetType = index === 0 ? 'thumbnail' : 'video';
+          console.log(`[DELETE_VIDEO_ACTION] Failed to delete ${assetType} from Cloudinary:`, result.reason);
+        }
+      });
     }
 
     // Delete embeddings asynchronously before deleting video

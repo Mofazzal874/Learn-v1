@@ -13,6 +13,7 @@ import {
 import connectDB from "@/lib/db";
 import { Video as VideoModel } from "@/models/Video";
 import { redirect } from "next/navigation";
+import DeleteVideoButton from "./components/DeleteVideoButton";
 
 interface VideoData {
   _id: string;
@@ -153,14 +154,11 @@ export default async function TutorVideos() {
                               Edit Video
                             </Link>
                           </DropdownMenuItem>
-                          <form action={`/api/videos/${video._id}`} method="DELETE">
-                            <DropdownMenuItem className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-900/20">
-                              <button type="submit" className="flex w-full items-center">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </button>
-                            </DropdownMenuItem>
-                          </form>
+                          <DeleteVideoButton
+                            videoId={video._id}
+                            videoTitle={video.title}
+                            variant="dropdown"
+                          />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

@@ -7,6 +7,7 @@ import connectDB from "@/lib/db";
 import { Video as VideoModel } from "@/models/Video";
 import { redirect } from "next/navigation";
 import PublishUnpublishButtons from "./PublishUnpublishButtons";
+import DeleteVideoButton from "../components/DeleteVideoButton";
 
 async function getVideo(id: string, userId: string) {
   await connectDB();
@@ -58,6 +59,12 @@ export default async function TutorVideoDetails({ params }: { params: { id: stri
             </Link>
             
             <PublishUnpublishButtons videoId={video._id} published={video.published} />
+            
+            <DeleteVideoButton
+              videoId={video._id}
+              videoTitle={video.title}
+              variant="button"
+            />
             
             <Link href="/tutor/videos">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
