@@ -4,6 +4,12 @@ import connectDB from "@/lib/db";
 import { Roadmap } from "@/models/Roadmap";
 import mongoose from "mongoose";
 
+// Import Course and Video models to fetch full details
+const CourseSchema = new mongoose.Schema({}, { strict: false });
+const VideoSchema = new mongoose.Schema({}, { strict: false });
+const Course = mongoose.models?.Course || mongoose.model('Course', CourseSchema);
+const Video = mongoose.models?.Video || mongoose.model('Video', VideoSchema);
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -61,19 +67,62 @@ export async function POST(req: Request) {
     }
 
     // Filter suggestions for this specific node
-    const existingCourses = (roadmap.suggestedCourse || [])
-      .filter((suggestion: { nodeId: string; courseId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId)
-      .map((suggestion: { courseId: mongoose.Types.ObjectId; status: boolean }) => ({
-        courseId: suggestion.courseId.toString(),
-        status: suggestion.status
-      }));
+    const nodeCourses: Array<{ nodeId: string; courseId: mongoose.Types.ObjectId; status: boolean }> = (roadmap.suggestedCourse || [])
+      .filter((suggestion: { nodeId: string; courseId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId);
+    
+    const nodeVideos: Array<{ nodeId: string; videoId: mongoose.Types.ObjectId; status: boolean }> = (roadmap.suggestedVideos || [])
+      .filter((suggestion: { nodeId: string; videoId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId);
 
-    const existingVideos = (roadmap.suggestedVideos || [])
-      .filter((suggestion: { nodeId: string; videoId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId)
-      .map((suggestion: { videoId: mongoose.Types.ObjectId; status: boolean }) => ({
-        videoId: suggestion.videoId.toString(),
-        status: suggestion.status
-      }));
+    // Fetch full course details
+    const existingCourses = [];
+    if (nodeCourses.length > 0) {
+      const courseIds = nodeCourses.map(suggestion => suggestion.courseId);
+      const coursesFromDB = await Course.find({ _id: { $in: courseIds } });
+      
+      for (const suggestion of nodeCourses) {
+        const course = coursesFromDB.find(c => c._id.toString() === suggestion.courseId.toString());
+        if (course) {
+          existingCourses.push({
+            courseId: course._id.toString(),
+            title: course.title || 'Unknown Course',
+            subtitle: course.subtitle || '',
+            category: course.category || 'General',
+            level: course.level || 'beginner',
+            price: course.price || 0,
+            isFree: course.isFree || false,
+            thumbnail: course.thumbnail || '',
+            status: suggestion.status,
+            score: 1.0 // Default score for existing suggestions
+          });
+        }
+      }
+    }
+
+    // Fetch full video details
+    const existingVideos = [];
+    if (nodeVideos.length > 0) {
+      const videoIds = nodeVideos.map(suggestion => suggestion.videoId);
+      const videosFromDB = await Video.find({ _id: { $in: videoIds } });
+      
+      for (const suggestion of nodeVideos) {
+        const video = videosFromDB.find(v => v._id.toString() === suggestion.videoId.toString());
+        if (video) {
+          existingVideos.push({
+            videoId: video._id.toString(),
+            title: video.title || 'Unknown Video',
+            subtitle: video.subtitle || '',
+            category: video.category || 'General',
+            level: video.level || 'beginner',
+            duration: video.duration || '0:00',
+            thumbnail: video.thumbnail || '',
+            views: video.views || 0,
+            rating: video.rating || 0,
+            status: suggestion.status,
+            score: 1.0 // Default score for existing suggestions
+          });
+        }
+      }
+    }
 
     console.log(`[EXISTING_SUGGESTIONS] Found ${existingCourses.length} courses and ${existingVideos.length} videos for node ${nodeId}`);
 

@@ -3,7 +3,6 @@ import { getSession } from "@/lib/getSession";
 import connectDB from "@/lib/db";
 import { processRoadmapEmbedding } from "@/lib/embedding";
 import { Roadmap } from "@/models/Roadmap";
-import mongoose from "mongoose";
 
 // Helper function to validate node data
 const validateNode = (node: Record<string, unknown>): boolean => {

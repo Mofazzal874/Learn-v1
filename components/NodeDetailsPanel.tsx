@@ -58,6 +58,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
     isFree: boolean;
     thumbnail: string;
     score: number;
+    status?: boolean; // Optional status field for existing suggestions
   }>>([]);
   
   const [suggestedVideos, setSuggestedVideos] = useState<Array<{
@@ -71,6 +72,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
     views: number;
     rating: number;
     score: number;
+    status?: boolean; // Optional status field for existing suggestions
   }>>([]);
   
   // Loading states
@@ -221,7 +223,10 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   const handleShowSuggestedCourses = () => {
     if (!showSuggestedCourses) {
       setShowSuggestedCourses(true);
-      fetchSuggestedCourses();
+      // Only fetch if we don't have existing suggestions and haven't fetched yet
+      if (!hasExistingSuggestions && !coursesFetched) {
+        fetchSuggestedCourses();
+      }
     } else {
       setShowSuggestedCourses(false);
     }
@@ -231,7 +236,10 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   const handleShowSuggestedVideos = () => {
     if (!showSuggestedVideos) {
       setShowSuggestedVideos(true);
-      fetchSuggestedVideos();
+      // Only fetch if we don't have existing suggestions and haven't fetched yet
+      if (!hasExistingSuggestions && !videosFetched) {
+        fetchSuggestedVideos();
+      }
     } else {
       setShowSuggestedVideos(false);
     }
@@ -279,13 +287,26 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       const hasVideos = data.videos.length > 0;
       setHasExistingSuggestions(hasCourses || hasVideos);
 
+      // If we have existing suggestions, populate the suggestion arrays
+      if (hasCourses) {
+        setSuggestedCourses(data.courses);
+        setCoursesFetched(true); // Mark as fetched so we don't call the API
+      }
+      
+      if (hasVideos) {
+        setSuggestedVideos(data.videos);
+        setVideosFetched(true); // Mark as fetched so we don't call the API
+      }
+
       console.log('Loaded existing suggestion statuses:', { 
         coursesStatus, 
         videosStatus, 
         nodeId: fixedNode.id,
         hasCourses,
         hasVideos,
-        hasExisting: hasCourses || hasVideos
+        hasExisting: hasCourses || hasVideos,
+        loadedCourses: data.courses.length,
+        loadedVideos: data.videos.length
       });
     } catch (error) {
       console.error('Error fetching existing suggestion statuses:', error);
@@ -329,11 +350,27 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
           ...prev,
           courses: { ...prev.courses, [suggestionId]: status }
         }));
+        // Also update the suggestedCourses array
+        setSuggestedCourses(prev => 
+          prev.map(course => 
+            course.courseId === suggestionId 
+              ? { ...course, status } 
+              : course
+          )
+        );
       } else {
         setExistingSuggestionsStatus(prev => ({
           ...prev,
           videos: { ...prev.videos, [suggestionId]: status }
         }));
+        // Also update the suggestedVideos array
+        setSuggestedVideos(prev => 
+          prev.map(video => 
+            video.videoId === suggestionId 
+              ? { ...video, status } 
+              : video
+          )
+        );
       }
 
       console.log(`Updated ${suggestionType} suggestion status:`, { suggestionId, status });
@@ -503,7 +540,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                       <Switch
                         id={`course-${course.courseId}`}
                         className="mt-1"
-                        checked={existingSuggestionsStatus.courses[course.courseId] || false}
+                        checked={course.status !== undefined ? course.status : (existingSuggestionsStatus.courses[course.courseId] || false)}
                         onCheckedChange={(checked) => 
                           handleSuggestionStatusChange('course', course.courseId, checked)
                         }
@@ -604,7 +641,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                       <Switch
                         id={`video-${video.videoId}`}
                         className="mt-1"
-                        checked={existingSuggestionsStatus.videos[video.videoId] || false}
+                        checked={video.status !== undefined ? video.status : (existingSuggestionsStatus.videos[video.videoId] || false)}
                         onCheckedChange={(checked) => 
                           handleSuggestionStatusChange('video', video.videoId, checked)
                         }
