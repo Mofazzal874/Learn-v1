@@ -1,14 +1,14 @@
 // components/NodeDetailsPanel.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { RoadmapNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 
-import { X, ChevronDown, ChevronRight, BookOpen, Video } from "lucide-react";
+import { X, ChevronDown, ChevronRight, BookOpen, Video, Loader2, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ interface NodeDetailsPanelProps {
   onClose: () => void;
   onUpdate: (node: RoadmapNode) => void;
   isMobile?: boolean;
+  roadmapId?: string; // Optional: if provided, suggestions will be enabled
 }
 
 const ensureStringTitle = (title: string | React.ReactNode): string => {
@@ -38,10 +39,62 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   onClose,
   onUpdate,
   isMobile = false,
+  roadmapId,
 }) => {
   const fixedNode = {...node, title: ensureStringTitle(node.title)};
   const [showSuggestedCourses, setShowSuggestedCourses] = useState(false);
   const [showSuggestedVideos, setShowSuggestedVideos] = useState(false);
+  
+  // Suggestions state
+  const [suggestedCourses, setSuggestedCourses] = useState<Array<{
+    courseId: string;
+    title: string;
+    subtitle: string;
+    category: string;
+    level: string;
+    price: number;
+    isFree: boolean;
+    thumbnail: string;
+    score: number;
+  }>>([]);
+  
+  const [suggestedVideos, setSuggestedVideos] = useState<Array<{
+    videoId: string;
+    title: string;
+    subtitle: string;
+    category: string;
+    level: string;
+    duration: string;
+    thumbnail: string;
+    views: number;
+    rating: number;
+    score: number;
+  }>>([]);
+  
+  // Loading states
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  
+  // Fetched state to avoid re-fetching
+  const [coursesFetched, setCoursesFetched] = useState(false);
+  const [videosFetched, setVideosFetched] = useState(false);
+  
+  // Existing suggestion statuses
+  const [existingSuggestionsStatus, setExistingSuggestionsStatus] = useState<{
+    courses: { [courseId: string]: boolean };
+    videos: { [videoId: string]: boolean };
+  }>({
+    courses: {},
+    videos: {}
+  });
+
+  // Load existing suggestion statuses when roadmapId or node changes
+  useEffect(() => {
+    if (roadmapId && fixedNode.id) {
+      fetchExistingSuggestionsStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roadmapId, fixedNode.id]);
   
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -59,6 +112,198 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       completed: checked,
       completionTime: checked ? new Date().toISOString() : undefined,
     });
+  };
+
+  // Function to fetch suggested courses
+  const fetchSuggestedCourses = async () => {
+    if (!roadmapId) {
+      alert("Please save the roadmap first to see suggested courses and videos");
+      return;
+    }
+
+    if (coursesFetched || loadingCourses) return;
+
+    setLoadingCourses(true);
+    try {
+      const queryText = `${fixedNode.title} ${Array.isArray(fixedNode.description) ? fixedNode.description.join(' ') : fixedNode.description || ''}`.trim();
+      
+      const response = await fetch('/api/roadmap/suggestions/courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: queryText,
+          topK: 5
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch course suggestions');
+      }
+
+      const data = await response.json();
+      setSuggestedCourses(data.suggestions || []);
+      setCoursesFetched(true);
+    } catch (error) {
+      console.error('Error fetching course suggestions:', error);
+      alert('Failed to fetch course suggestions. Please try again.');
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  // Function to fetch suggested videos
+  const fetchSuggestedVideos = async () => {
+    if (!roadmapId) {
+      alert("Please save the roadmap first to see suggested courses and videos");
+      return;
+    }
+
+    if (videosFetched || loadingVideos) return;
+
+    setLoadingVideos(true);
+    try {
+      const queryText = `${fixedNode.title} ${Array.isArray(fixedNode.description) ? fixedNode.description.join(' ') : fixedNode.description || ''}`.trim();
+      
+      const response = await fetch('/api/roadmap/suggestions/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: queryText,
+          topK: 5
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch video suggestions');
+      }
+
+      const data = await response.json();
+      setSuggestedVideos(data.suggestions || []);
+      setVideosFetched(true);
+    } catch (error) {
+      console.error('Error fetching video suggestions:', error);
+      alert('Failed to fetch video suggestions. Please try again.');
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
+  // Handle course expand with fetching
+  const handleShowSuggestedCourses = () => {
+    if (!showSuggestedCourses) {
+      setShowSuggestedCourses(true);
+      fetchSuggestedCourses();
+    } else {
+      setShowSuggestedCourses(false);
+    }
+  };
+
+  // Handle video expand with fetching
+  const handleShowSuggestedVideos = () => {
+    if (!showSuggestedVideos) {
+      setShowSuggestedVideos(true);
+      fetchSuggestedVideos();
+    } else {
+      setShowSuggestedVideos(false);
+    }
+  };
+
+  // Fetch existing suggestion statuses for this node
+  const fetchExistingSuggestionsStatus = async () => {
+    if (!roadmapId) return;
+
+    try {
+      const response = await fetch('/api/roadmap/suggestions/existing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roadmapId,
+          nodeId: fixedNode.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch existing suggestions');
+      }
+
+      const data = await response.json();
+      const coursesStatus: { [courseId: string]: boolean } = {};
+      const videosStatus: { [videoId: string]: boolean } = {};
+
+      data.courses.forEach((course: { courseId: string; status: boolean }) => {
+        coursesStatus[course.courseId] = course.status;
+      });
+
+      data.videos.forEach((video: { videoId: string; status: boolean }) => {
+        videosStatus[video.videoId] = video.status;
+      });
+
+      setExistingSuggestionsStatus({
+        courses: coursesStatus,
+        videos: videosStatus
+      });
+
+      console.log('Loaded existing suggestion statuses:', { coursesStatus, videosStatus });
+    } catch (error) {
+      console.error('Error fetching existing suggestion statuses:', error);
+      // Fail silently - this is not critical functionality
+    }
+  };
+
+  // Handle suggestion status changes
+  const handleSuggestionStatusChange = async (
+    suggestionType: 'course' | 'video',
+    suggestionId: string,
+    status: boolean
+  ) => {
+    if (!roadmapId) {
+      alert("Please save the roadmap first to update suggestion status");
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/roadmap/suggestions/status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roadmapId,
+          nodeId: fixedNode.id,
+          suggestionType,
+          suggestionId,
+          status
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update suggestion status');
+      }
+
+      // Update local state
+      if (suggestionType === 'course') {
+        setExistingSuggestionsStatus(prev => ({
+          ...prev,
+          courses: { ...prev.courses, [suggestionId]: status }
+        }));
+      } else {
+        setExistingSuggestionsStatus(prev => ({
+          ...prev,
+          videos: { ...prev.videos, [suggestionId]: status }
+        }));
+      }
+
+      console.log(`Updated ${suggestionType} suggestion status:`, { suggestionId, status });
+    } catch (error) {
+      console.error('Error updating suggestion status:', error);
+      alert('Failed to update suggestion status. Please try again.');
+    }
   };
 
   return (
@@ -164,26 +409,73 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         <div className="space-y-2">
           <Button
             variant="outline"
-            onClick={() => setShowSuggestedCourses(!showSuggestedCourses)}
+            onClick={handleShowSuggestedCourses}
             className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
           >
             <div className="flex items-center space-x-2">
               <BookOpen className="h-4 w-4" />
               <span>Suggested Courses</span>
+              {loadingCourses && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
-            {showSuggestedCourses ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+            <div className="flex items-center space-x-1">
+              {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
+              {showSuggestedCourses ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </div>
           </Button>
           
           {showSuggestedCourses && (
             <div className="p-3 bg-[#1a1a1a] rounded-md border border-white/10">
-              {/* Mock data - will be replaced with actual courses later */}
-              <div className="space-y-2">
-                <p className="text-sm text-gray-400 text-center">No courses found</p>
-              </div>
+              {loadingCourses ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  <span className="ml-2 text-sm text-gray-400">Loading suggestions...</span>
+                </div>
+              ) : suggestedCourses.length > 0 ? (
+                <div className="space-y-3">
+                  {suggestedCourses.map((course) => (
+                    <div key={course.courseId} className="flex items-start space-x-3 p-2 rounded border border-white/5 bg-[#0f0f0f]">
+                      <Switch
+                        id={`course-${course.courseId}`}
+                        className="mt-1"
+                        checked={existingSuggestionsStatus.courses[course.courseId] || false}
+                        onCheckedChange={(checked) => 
+                          handleSuggestionStatusChange('course', course.courseId, checked)
+                        }
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Label 
+                          htmlFor={`course-${course.courseId}`}
+                          className="text-sm font-medium text-white cursor-pointer"
+                        >
+                          {course.title}
+                        </Label>
+                        {course.subtitle && (
+                          <p className="text-xs text-gray-400 mt-1">{course.subtitle}</p>
+                        )}
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded">
+                            {course.category}
+                          </span>
+                          <span className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded">
+                            {course.level}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {course.isFree ? 'Free' : `$${course.price}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-400">No courses found for this topic</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -192,26 +484,80 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         <div className="space-y-2">
           <Button
             variant="outline"
-            onClick={() => setShowSuggestedVideos(!showSuggestedVideos)}
+            onClick={handleShowSuggestedVideos}
             className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
           >
             <div className="flex items-center space-x-2">
               <Video className="h-4 w-4" />
               <span>Suggested Videos</span>
+              {loadingVideos && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
-            {showSuggestedVideos ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+            <div className="flex items-center space-x-1">
+              {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
+              {showSuggestedVideos ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </div>
           </Button>
           
           {showSuggestedVideos && (
             <div className="p-3 bg-[#1a1a1a] rounded-md border border-white/10">
-              {/* Mock data - will be replaced with actual videos later */}
-              <div className="space-y-2">
-                <p className="text-sm text-gray-400 text-center">No videos found</p>
-              </div>
+              {loadingVideos ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  <span className="ml-2 text-sm text-gray-400">Loading suggestions...</span>
+                </div>
+              ) : suggestedVideos.length > 0 ? (
+                <div className="space-y-3">
+                  {suggestedVideos.map((video) => (
+                    <div key={video.videoId} className="flex items-start space-x-3 p-2 rounded border border-white/5 bg-[#0f0f0f]">
+                      <Switch
+                        id={`video-${video.videoId}`}
+                        className="mt-1"
+                        checked={existingSuggestionsStatus.videos[video.videoId] || false}
+                        onCheckedChange={(checked) => 
+                          handleSuggestionStatusChange('video', video.videoId, checked)
+                        }
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Label 
+                          htmlFor={`video-${video.videoId}`}
+                          className="text-sm font-medium text-white cursor-pointer"
+                        >
+                          {video.title}
+                        </Label>
+                        {video.subtitle && (
+                          <p className="text-xs text-gray-400 mt-1">{video.subtitle}</p>
+                        )}
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded">
+                            {video.category}
+                          </span>
+                          <span className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded">
+                            {video.level}
+                          </span>
+                          {video.duration && (
+                            <span className="text-xs text-gray-500">
+                              {video.duration}
+                            </span>
+                          )}
+                          {video.views > 0 && (
+                            <span className="text-xs text-gray-500">
+                              {video.views} views
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-400">No videos found for this topic</p>
+                </div>
+              )}
             </div>
           )}
         </div>

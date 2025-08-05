@@ -417,6 +417,75 @@ export async function deleteCourseEmbedding(courseId: string, userId: string): P
 }
 
 /**
+ * Search for suggested courses based on a text query
+ */
+export async function searchSuggestedCourses(
+  query: string,
+  topK: number = 5
+): Promise<Array<{
+  courseId: string;
+  title: string;
+  category: string;
+  level: string;
+  score: number;
+}>> {
+  if (!process.env.COHERE_API_KEY) {
+    throw new Error('COHERE_API_KEY environment variable is required');
+  }
+
+  if (!process.env.PINECONE_API_KEY || !process.env.PINECONE_INDEX_NAME) {
+    throw new Error('Pinecone configuration is required');
+  }
+
+  if (!query || query.trim().length === 0) {
+    throw new Error('Query text is required');
+  }
+
+  try {
+    console.log(`[COURSE_SEARCH] Searching for courses related to: "${query}"`);
+    
+    // Generate embedding for the search query using the same preprocessing
+    const processedQuery = preprocessText(query);
+    const queryVector = await generateEmbedding(processedQuery);
+    
+    console.log(`[COURSE_SEARCH] Generated query embedding with ${queryVector.length} dimensions`);
+    
+    // Search in Pinecone
+    const index = pinecone.index(process.env.PINECONE_INDEX_NAME);
+    const namespace = index.namespace(EMBEDDING_CONFIG.PINECONE_NAMESPACE);
+    
+    const searchResults = await namespace.query({
+      vector: queryVector,
+      topK,
+      includeMetadata: true,
+      filter: {
+        entityType: 'course'  // Only search for courses
+      }
+    });
+
+    if (!searchResults.matches || searchResults.matches.length === 0) {
+      console.log('[COURSE_SEARCH] No matching courses found');
+      return [];
+    }
+
+    console.log(`[COURSE_SEARCH] Found ${searchResults.matches.length} matching courses`);
+    
+    // Process and return results
+    return searchResults.matches.map(match => ({
+      courseId: match.metadata?.courseId as string || match.metadata?.sourceId as string,
+      title: match.metadata?.title as string || 'Unknown Title',
+      category: match.metadata?.category as string || 'Unknown Category',
+      level: match.metadata?.level as string || 'Unknown Level',
+      score: match.score || 0
+    })).filter(result => result.courseId); // Filter out any results without courseId
+
+  } catch (error: unknown) {
+    console.error('[COURSE_SEARCH] Search failed:', error);
+    throw new Error(`Course search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
  * Health check for embedding services
  */
 export async function checkCourseEmbeddingServicesHealth(): Promise<{
@@ -442,8 +511,8 @@ export async function checkCourseEmbeddingServicesHealth(): Promise<{
     });
     
     cohereHealthy = true;
-  } catch (error: any) {
-    errors.push(`Cohere: ${error.message}`);
+  } catch (error: unknown) {
+    errors.push(`Cohere: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   // Check Pinecone
@@ -456,8 +525,8 @@ export async function checkCourseEmbeddingServicesHealth(): Promise<{
     await index.describeIndexStats();
     
     pineconeHealthy = true;
-  } catch (error: any) {
-    errors.push(`Pinecone: ${error.message}`);
+  } catch (error: unknown) {
+    errors.push(`Pinecone: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   return {

@@ -76,6 +76,7 @@ export default function RoadmapView() {
           edges={edges}
           onUpdateNodes={handleUpdateNodes}
           onUpdateEdges={handleUpdateEdges}
+          roadmapId={params.id as string}
         />
       </div>
     </div>

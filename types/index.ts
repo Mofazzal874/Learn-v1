@@ -28,11 +28,13 @@ export interface RoadmapEdge {
 
 export interface SuggestedCourse {
   courseId: string;
+  nodeId: string;
   status: boolean;
 }
 
 export interface SuggestedVideo {
   videoId: string;
+  nodeId: string;
   status: boolean;
 }
 

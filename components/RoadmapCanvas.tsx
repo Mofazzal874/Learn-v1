@@ -48,6 +48,7 @@ interface RoadmapCanvasProps {
   onSave?: (name: string) => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
+  roadmapId?: string; // Optional roadmap ID for suggestions functionality
 }
 
 // Add this helper function at the top of the file (before the component)
@@ -175,6 +176,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   onSave,
   isSaving = false,
   readOnly = false,
+  roadmapId,
 }) => {
   // Determine which set of props to use
   const nodes = propNodes || propInitialNodes || [];
@@ -383,6 +385,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
                 }}
                 onUpdate={handleNodeUpdate}
                 isMobile={isMobile}
+                roadmapId={roadmapId}
               />
             </div>
           </div>
@@ -402,6 +405,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
                 onClose={() => setSelectedNode(null)}
                 onUpdate={handleNodeUpdate}
                 isMobile={isMobile}
+                roadmapId={roadmapId}
               />
             </div>
           </SheetContent>

@@ -407,6 +407,75 @@ export async function deleteVideoEmbedding(videoId: string, userId: string): Pro
 }
 
 /**
+ * Search for suggested videos based on a text query
+ */
+export async function searchSuggestedVideos(
+  query: string,
+  topK: number = 5
+): Promise<Array<{
+  videoId: string;
+  title: string;
+  category: string;
+  level: string;
+  score: number;
+}>> {
+  if (!process.env.COHERE_API_KEY) {
+    throw new Error('COHERE_API_KEY environment variable is required');
+  }
+
+  if (!process.env.PINECONE_API_KEY || !process.env.PINECONE_INDEX_NAME) {
+    throw new Error('Pinecone configuration is required');
+  }
+
+  if (!query || query.trim().length === 0) {
+    throw new Error('Query text is required');
+  }
+
+  try {
+    console.log(`[VIDEO_SEARCH] Searching for videos related to: "${query}"`);
+    
+    // Generate embedding for the search query using the same preprocessing
+    const processedQuery = preprocessText(query);
+    const queryVector = await generateEmbedding(processedQuery);
+    
+    console.log(`[VIDEO_SEARCH] Generated query embedding with ${queryVector.length} dimensions`);
+    
+    // Search in Pinecone
+    const index = pinecone.index(process.env.PINECONE_INDEX_NAME);
+    const namespace = index.namespace(EMBEDDING_CONFIG.PINECONE_NAMESPACE);
+    
+    const searchResults = await namespace.query({
+      vector: queryVector,
+      topK,
+      includeMetadata: true,
+      filter: {
+        entityType: 'video'  // Only search for videos
+      }
+    });
+
+    if (!searchResults.matches || searchResults.matches.length === 0) {
+      console.log('[VIDEO_SEARCH] No matching videos found');
+      return [];
+    }
+
+    console.log(`[VIDEO_SEARCH] Found ${searchResults.matches.length} matching videos`);
+    
+    // Process and return results
+    return searchResults.matches.map(match => ({
+      videoId: match.metadata?.videoId as string || match.metadata?.sourceId as string,
+      title: match.metadata?.title as string || 'Unknown Title',
+      category: match.metadata?.category as string || 'Unknown Category',
+      level: match.metadata?.level as string || 'Unknown Level',
+      score: match.score || 0
+    })).filter(result => result.videoId); // Filter out any results without videoId
+
+  } catch (error: unknown) {
+    console.error('[VIDEO_SEARCH] Search failed:', error);
+    throw new Error(`Video search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
  * Health check for embedding services
  */
 export async function checkVideoEmbeddingServicesHealth(): Promise<{
@@ -432,8 +501,8 @@ export async function checkVideoEmbeddingServicesHealth(): Promise<{
     });
     
     cohereHealthy = true;
-  } catch (error: any) {
-    errors.push(`Cohere: ${error.message}`);
+  } catch (error: unknown) {
+    errors.push(`Cohere: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   // Check Pinecone
@@ -446,8 +515,8 @@ export async function checkVideoEmbeddingServicesHealth(): Promise<{
     await index.describeIndexStats();
     
     pineconeHealthy = true;
-  } catch (error: any) {
-    errors.push(`Pinecone: ${error.message}`);
+  } catch (error: unknown) {
+    errors.push(`Pinecone: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   return {
