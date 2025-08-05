@@ -61,6 +61,24 @@ function cleanNodeTitle(title: string): string {
 }
 
 /**
+ * Cleans HTML tags and formatting from text
+ */
+export function cleanHtmlText(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, ' ')
+    // Remove common markdown/formatting
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markdown
+    .replace(/\*([^*]+)\*/g, '$1') // Remove italic markdown
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+    // Clean up whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Extracts and concatenates relevant text from roadmap data
  */
 export function extractRoadmapText(roadmap: any): string {
@@ -68,7 +86,7 @@ export function extractRoadmapText(roadmap: any): string {
 
   // Add title (high importance)
   if (roadmap.title) {
-    parts.push(`Title: ${roadmap.title}`);
+    parts.push(roadmap.title);
   }
 
   // Process nodes with sequence weighting
@@ -84,20 +102,23 @@ export function extractRoadmapText(roadmap: any): string {
       return weightedTitle;
     }).join(' ');
     
-    parts.push(`Topics: ${nodeTitles}`);
+    if (nodeTitles) {
+      parts.push(nodeTitles);
+    }
 
-    // Add descriptions (concatenated)
+    // Add cleaned descriptions (concatenated)
     const descriptions = sortedNodes
       .flatMap((node: any) => node.description || [])
       .filter((desc: any) => desc && desc.trim().length > 0)
+      .map((desc: any) => cleanHtmlText(desc))
       .join(' ');
     
     if (descriptions) {
-      parts.push(`Content: ${descriptions}`);
+      parts.push(descriptions);
     }
   }
 
-  return parts.join(' | ');
+  return parts.join(' ');
 }
 
 /**
