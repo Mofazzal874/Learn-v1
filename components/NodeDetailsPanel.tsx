@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { RoadmapNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   isMobile = false,
   roadmapId,
 }) => {
+  const router = useRouter();
   const fixedNode = {...node, title: ensureStringTitle(node.title)};
   const [showSuggestedCourses, setShowSuggestedCourses] = useState(false);
   const [showSuggestedVideos, setShowSuggestedVideos] = useState(false);
@@ -87,10 +89,23 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
     courses: {},
     videos: {}
   });
+  
+  // Track if we have existing suggestions for this specific node
+  const [hasExistingSuggestions, setHasExistingSuggestions] = useState(false);
 
   // Load existing suggestion statuses when roadmapId or node changes
   useEffect(() => {
     if (roadmapId && fixedNode.id) {
+      // Reset states for new node
+      setSuggestedCourses([]);
+      setSuggestedVideos([]);
+      setCoursesFetched(false);
+      setVideosFetched(false);
+      setShowSuggestedCourses(false);
+      setShowSuggestedVideos(false);
+      setHasExistingSuggestions(false);
+      
+      // Fetch existing suggestions for this node
       fetchExistingSuggestionsStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,7 +149,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         },
         body: JSON.stringify({
           query: queryText,
-          topK: 5
+          topK: 5,
+          roadmapId: roadmapId,
+          nodeId: fixedNode.id
         }),
       });
 
@@ -145,6 +162,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       const data = await response.json();
       setSuggestedCourses(data.suggestions || []);
       setCoursesFetched(true);
+      
+      // After fetching, this node now has suggestions (even if empty)
+      setHasExistingSuggestions(true);
     } catch (error) {
       console.error('Error fetching course suggestions:', error);
       alert('Failed to fetch course suggestions. Please try again.');
@@ -173,7 +193,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         },
         body: JSON.stringify({
           query: queryText,
-          topK: 5
+          topK: 5,
+          roadmapId: roadmapId,
+          nodeId: fixedNode.id
         }),
       });
 
@@ -184,6 +206,9 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       const data = await response.json();
       setSuggestedVideos(data.suggestions || []);
       setVideosFetched(true);
+      
+      // After fetching, this node now has suggestions (even if empty)
+      setHasExistingSuggestions(true);
     } catch (error) {
       console.error('Error fetching video suggestions:', error);
       alert('Failed to fetch video suggestions. Please try again.');
@@ -248,8 +273,20 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         courses: coursesStatus,
         videos: videosStatus
       });
+      
+      // Check if this node has any existing suggestions
+      const hasCourses = data.courses.length > 0;
+      const hasVideos = data.videos.length > 0;
+      setHasExistingSuggestions(hasCourses || hasVideos);
 
-      console.log('Loaded existing suggestion statuses:', { coursesStatus, videosStatus });
+      console.log('Loaded existing suggestion statuses:', { 
+        coursesStatus, 
+        videosStatus, 
+        nodeId: fixedNode.id,
+        hasCourses,
+        hasVideos,
+        hasExisting: hasCourses || hasVideos
+      });
     } catch (error) {
       console.error('Error fetching existing suggestion statuses:', error);
       // Fail silently - this is not critical functionality
@@ -407,25 +444,50 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
 
         {/* Suggested Courses Section */}
         <div className="space-y-2">
-          <Button
-            variant="outline"
-            onClick={handleShowSuggestedCourses}
-            className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
-          >
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-4 w-4" />
-              <span>Suggested Courses</span>
-              {loadingCourses && <Loader2 className="h-3 w-3 animate-spin" />}
-            </div>
-            <div className="flex items-center space-x-1">
-              {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
-              {showSuggestedCourses ? (
-                <ChevronDown className="h-4 w-4" />
+          {!hasExistingSuggestions && !coursesFetched ? (
+            // Show search button when no existing suggestions and not fetched yet
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSuggestedCourses(true);
+                fetchSuggestedCourses();
+              }}
+              disabled={loadingCourses || !roadmapId}
+              className="w-full flex items-center justify-center bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              {loadingCourses ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  Searching Courses...
+                </>
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                "Search Courses"
               )}
-            </div>
-          </Button>
+              {!roadmapId && <AlertCircle className="h-3 w-3 ml-2 text-yellow-500" />}
+            </Button>
+          ) : (
+            // Show expand/collapse button when have existing suggestions or already fetched
+            <Button
+              variant="outline"
+              onClick={handleShowSuggestedCourses}
+              className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
+            >
+              <div className="flex items-center space-x-2">
+                <BookOpen className="h-4 w-4" />
+                <span>Suggested Courses {existingSuggestionsStatus.courses && Object.keys(existingSuggestionsStatus.courses).length > 0 ? `(${Object.keys(existingSuggestionsStatus.courses).length})` : ''}</span>
+                {loadingCourses && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
+              <div className="flex items-center space-x-1">
+                {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
+                {showSuggestedCourses ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+            </Button>
+          )}
           
           {showSuggestedCourses && (
             <div className="p-3 bg-[#1a1a1a] rounded-md border border-white/10">
@@ -449,7 +511,8 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                       <div className="flex-1 min-w-0">
                         <Label 
                           htmlFor={`course-${course.courseId}`}
-                          className="text-sm font-medium text-white cursor-pointer"
+                          className="text-sm font-medium text-white cursor-pointer hover:text-blue-300 transition-colors"
+                          onClick={() => router.push(`/courses/${course.courseId}`)}
                         >
                           {course.title}
                         </Label>
@@ -482,25 +545,50 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
 
         {/* Suggested Videos Section */}
         <div className="space-y-2">
-          <Button
-            variant="outline"
-            onClick={handleShowSuggestedVideos}
-            className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
-          >
-            <div className="flex items-center space-x-2">
-              <Video className="h-4 w-4" />
-              <span>Suggested Videos</span>
-              {loadingVideos && <Loader2 className="h-3 w-3 animate-spin" />}
-            </div>
-            <div className="flex items-center space-x-1">
-              {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
-              {showSuggestedVideos ? (
-                <ChevronDown className="h-4 w-4" />
+          {!hasExistingSuggestions && !videosFetched ? (
+            // Show search button when no existing suggestions and not fetched yet
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSuggestedVideos(true);
+                fetchSuggestedVideos();
+              }}
+              disabled={loadingVideos || !roadmapId}
+              className="w-full flex items-center justify-center bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
+            >
+              <Video className="h-4 w-4 mr-2" />
+              {loadingVideos ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  Searching Videos...
+                </>
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                "Search Videos"
               )}
-            </div>
-          </Button>
+              {!roadmapId && <AlertCircle className="h-3 w-3 ml-2 text-yellow-500" />}
+            </Button>
+          ) : (
+            // Show expand/collapse button when have existing suggestions or already fetched
+            <Button
+              variant="outline"
+              onClick={handleShowSuggestedVideos}
+              className="w-full flex items-center justify-between bg-[#1a1a1a] border-white/10 text-white hover:bg-[#2a2a2a]"
+            >
+              <div className="flex items-center space-x-2">
+                <Video className="h-4 w-4" />
+                <span>Suggested Videos {existingSuggestionsStatus.videos && Object.keys(existingSuggestionsStatus.videos).length > 0 ? `(${Object.keys(existingSuggestionsStatus.videos).length})` : ''}</span>
+                {loadingVideos && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
+              <div className="flex items-center space-x-1">
+                {!roadmapId && <AlertCircle className="h-3 w-3 text-yellow-500" />}
+                {showSuggestedVideos ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+            </Button>
+          )}
           
           {showSuggestedVideos && (
             <div className="p-3 bg-[#1a1a1a] rounded-md border border-white/10">
@@ -524,7 +612,8 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                       <div className="flex-1 min-w-0">
                         <Label 
                           htmlFor={`video-${video.videoId}`}
-                          className="text-sm font-medium text-white cursor-pointer"
+                          className="text-sm font-medium text-white cursor-pointer hover:text-blue-300 transition-colors"
+                          onClick={() => router.push(`/videos/${video.videoId}`)}
                         >
                           {video.title}
                         </Label>

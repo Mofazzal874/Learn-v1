@@ -3,6 +3,8 @@ import { getSession } from "@/lib/getSession";
 import { searchSuggestedCourses } from "@/lib/course-embedding";
 import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
+import { Roadmap } from "@/models/Roadmap";
+import mongoose from "mongoose";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +16,7 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { query, topK = 5 } = body;
+    const { query, topK = 5, roadmapId, nodeId } = body;
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
@@ -63,6 +65,85 @@ export async function POST(req: Request) {
     }).filter(Boolean); // Remove null values
 
     console.log(`[COURSE_SUGGESTIONS_API] Found ${suggestedCourses.length} suggested courses`);
+
+    // If roadmapId and nodeId are provided, save the suggestions to the roadmap
+    if (roadmapId && nodeId && suggestedCourses.length > 0) {
+      try {
+        console.log(`[COURSE_SUGGESTIONS_API] Saving suggestions to roadmap ${roadmapId}, node ${nodeId}`);
+        
+        // Find the roadmap
+        const roadmap = await Roadmap.findOne({
+          _id: roadmapId,
+          userId: session.user.id
+        });
+
+        if (roadmap) {
+          try {
+            // Step 1: Ensure the roadmap has suggestion fields
+            if (!roadmap.suggestedCourse || !roadmap.suggestedVideos) {
+              console.log(`[COURSE_SUGGESTIONS_API] Adding missing suggestion fields to roadmap ${roadmapId}`);
+              
+              const updateFields: Record<string, unknown[]> = {};
+              if (!roadmap.suggestedCourse) updateFields.suggestedCourse = [];
+              if (!roadmap.suggestedVideos) updateFields.suggestedVideos = [];
+              
+              await Roadmap.updateOne(
+                { _id: roadmapId },
+                { $set: updateFields }
+              );
+              console.log(`[COURSE_SUGGESTIONS_API] Added missing fields to roadmap ${roadmapId}`);
+            }
+
+            // Step 2: Get current suggestions for this node
+            const currentRoadmap = await Roadmap.findById(roadmapId);
+            if (!currentRoadmap) {
+              console.error(`[COURSE_SUGGESTIONS_API] Roadmap not found: ${roadmapId}`);
+              return;
+            }
+
+            const existingCourses = currentRoadmap.suggestedCourse || [];
+            const existingCourseIds = new Set(
+              existingCourses
+                .filter((suggestion: { nodeId: string }) => suggestion.nodeId === nodeId)
+                .map((suggestion: { courseId: mongoose.Types.ObjectId }) => suggestion.courseId.toString())
+            );
+
+            // Step 3: Prepare new suggestions
+            const newSuggestions = suggestedCourses
+              .filter((course): course is NonNullable<typeof course> => 
+                course !== null && !existingCourseIds.has(course.courseId)
+              )
+              .map(course => ({
+                courseId: new mongoose.Types.ObjectId(course.courseId),
+                nodeId,
+                status: false
+              }));
+
+            // Step 4: Save new suggestions
+            if (newSuggestions.length > 0) {
+              await Roadmap.updateOne(
+                { _id: roadmapId },
+                { 
+                  $push: { 
+                    suggestedCourse: { $each: newSuggestions } 
+                  }
+                }
+              );
+              console.log(`[COURSE_SUGGESTIONS_API] Successfully saved ${newSuggestions.length} new course suggestions`);
+            } else {
+              console.log(`[COURSE_SUGGESTIONS_API] No new course suggestions to add for node ${nodeId}`);
+            }
+
+          } catch (migrationError) {
+            console.error(`[COURSE_SUGGESTIONS_API] Error during suggestion save:`, migrationError);
+            // Don't throw - continue with response
+          }
+        }
+      } catch (saveError) {
+        console.error("[COURSE_SUGGESTIONS_API] Error saving suggestions:", saveError);
+        // Continue with the response even if saving fails
+      }
+    }
 
     return NextResponse.json({
       suggestions: suggestedCourses,

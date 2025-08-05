@@ -19,8 +19,11 @@ export async function POST(req: Request) {
       title,
       level,
       roadmapType,
+      treeDirection: "top-down", // Default direction
       nodes,
       edges,
+      suggestedCourse: [], // Initialize empty arrays for suggestions
+      suggestedVideos: []
     });
 
     return NextResponse.json(roadmap);

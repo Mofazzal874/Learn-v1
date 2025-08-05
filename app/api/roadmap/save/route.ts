@@ -1,21 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/getSession";
-import connectDB, { mongoose } from "@/lib/db";
+import connectDB from "@/lib/db";
 import { RoadmapNode, RoadmapEdge } from "@/types";
 import { processRoadmapEmbedding } from "@/lib/embedding";
-
-// Define the Roadmap schema
-const RoadmapSchema = new mongoose.Schema({
-  name: String,
-  userId: String,
-  nodes: [Object],
-  edges: [Object],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
-
-// Get or create the Roadmap model
-const Roadmap = mongoose.models.Roadmap || mongoose.model('Roadmap', RoadmapSchema);
+import { Roadmap } from "@/models/Roadmap";
 
 // Helper function to validate node data
 const validateNode = (node: any): boolean => {
@@ -126,13 +114,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // Create the document
+    // Create the document using the proper Roadmap model
     console.log(`[SAVE_ROADMAP] Creating roadmap "${name}" for user ${session.user.id} with ${validatedNodes.length} nodes and ${validatedEdges.length} edges`);
     const roadmap = await Roadmap.create({
-      name,
       userId: session.user.id,
+      title: name, // Use 'title' instead of 'name' to match the schema
+      level: "beginner", // Default level - you might want to get this from the request
+      roadmapType: "topic-wise", // Default type - you might want to get this from the request
+      treeDirection: "top-down", // Default direction
       nodes: validatedNodes,
       edges: validatedEdges,
+      suggestedCourse: [], // Initialize empty arrays for suggestions
+      suggestedVideos: []
     });
 
     console.log(`[SAVE_ROADMAP] Roadmap saved successfully with ID: ${roadmap._id}`);
@@ -143,7 +136,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       success: true, 
       id: roadmap._id, 
-      name: roadmap.name,
+      name: roadmap.title, // Use 'title' since that's what we saved
       nodeCount: validatedNodes.length,
       edgeCount: validatedEdges.length,
       embeddingStatus: "processing"
@@ -173,9 +166,9 @@ async function processEmbeddingsAsync(roadmap: any, userId: string) {
     // Convert the mongoose document to a plain object that matches IRoadmap interface
     const roadmapData = {
       _id: roadmap._id,
-      title: roadmap.name, // Note: saved roadmaps use 'name' but IRoadmap expects 'title'
-      level: roadmap.level || "beginner", // Provide default if not available
-      roadmapType: roadmap.roadmapType || "topic-wise", // Provide default if not available
+      title: roadmap.title, // Now using the correct field name
+      level: roadmap.level || "beginner",
+      roadmapType: roadmap.roadmapType || "topic-wise",
       nodes: roadmap.nodes || [],
       edges: roadmap.edges || [],
       userId: roadmap.userId,

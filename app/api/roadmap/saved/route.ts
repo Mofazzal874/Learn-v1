@@ -1,23 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/getSession";
-import connectDB, { mongoose } from "@/lib/db";
+import connectDB from "@/lib/db";
 import { processRoadmapEmbedding } from "@/lib/embedding";
-
-// Define the Roadmap schema
-const RoadmapSchema = new mongoose.Schema({
-  name: String,
-  userId: String,
-  nodes: [Object],
-  edges: [Object],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
-
-// Get or create the Roadmap model
-const Roadmap = mongoose.models.Roadmap || mongoose.model('Roadmap', RoadmapSchema);
+import { Roadmap } from "@/models/Roadmap";
+import mongoose from "mongoose";
 
 // Helper function to validate node data
-const validateNode = (node: any): boolean => {
+const validateNode = (node: Record<string, unknown>): boolean => {
   if (!node || typeof node !== 'object') return false;
   if (!node.id || typeof node.id !== 'string') return false;
   
@@ -33,7 +22,7 @@ const validateNode = (node: any): boolean => {
 };
 
 // Helper function to validate edge data
-const validateEdge = (edge: any): boolean => {
+const validateEdge = (edge: Record<string, unknown>): boolean => {
   if (!edge || typeof edge !== 'object') return false;
   if (!edge.id || typeof edge.id !== 'string') return false;
   if (!edge.source || typeof edge.source !== 'string') return false;
@@ -64,7 +53,15 @@ export async function GET() {
     }).sort({ updatedAt: -1 });
     
     console.log(`[ROADMAP_SAVED] Found ${roadmaps.length} roadmaps`);
-    return NextResponse.json(roadmaps);
+    
+    // Transform roadmaps to ensure frontend compatibility
+    const transformedRoadmaps = roadmaps.map(roadmap => ({
+      ...roadmap.toObject(),
+      name: roadmap.title || roadmap.name, // Ensure 'name' field exists for frontend
+      title: roadmap.title || roadmap.name // Keep title for consistency
+    }));
+    
+    return NextResponse.json(transformedRoadmaps);
   } catch (error) {
     console.error("[ROADMAP_SAVED] Error:", error);
     return new NextResponse(JSON.stringify({
@@ -129,7 +126,7 @@ export async function POST(req: Request) {
     const validatedNodes = [];
     const invalidNodes = [];
     
-    for (let node of nodes) {
+    for (const node of nodes) {
       if (validateNode(node)) {
         validatedNodes.push(node);
       } else {
@@ -140,7 +137,7 @@ export async function POST(req: Request) {
     const validatedEdges = [];
     const invalidEdges = [];
     
-    for (let edge of edges) {
+    for (const edge of edges) {
       if (validateEdge(edge)) {
         validatedEdges.push(edge);
       } else {
@@ -168,13 +165,20 @@ export async function POST(req: Request) {
     
     // Create new roadmap
     console.log(`[ROADMAP_SAVED] Creating roadmap "${name}" for user ${session.user.id}`);
-    const roadmap = await Roadmap.create({
-      name,
+    
+    const roadmapData = {
       userId: session.user.id,
+      title: name, // Use 'title' to match the schema
+      level: "beginner", // Default level
+      roadmapType: "topic-wise", // Default type
+      treeDirection: "top-down", // Default direction
       nodes: validatedNodes,
       edges: validatedEdges,
-    });
+      suggestedCourse: [], // Initialize empty arrays for suggestions
+      suggestedVideos: []
+    };
     
+    const roadmap = await Roadmap.create(roadmapData);
     console.log(`[ROADMAP_SAVED] Successfully created roadmap with ID: ${roadmap._id}`);
     
     // Process embeddings asynchronously - don't wait for completion
@@ -183,7 +187,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       id: roadmap._id,
-      name: roadmap.name,
+      name: roadmap.title, // Use title since that's what we saved
       embeddingStatus: "processing"
     });
   } catch (error) {
@@ -199,14 +203,14 @@ export async function POST(req: Request) {
 }
 
 // Async function to process embeddings without blocking the response
-async function processEmbeddingsAsync(roadmap: any, userId: string) {
+async function processEmbeddingsAsync(roadmap: Record<string, unknown>, userId: string) {
   try {
     console.log(`[ROADMAP_SAVED] Starting async embedding processing for roadmap ${roadmap._id}`);
     
     // Convert the mongoose document to a plain object that matches IRoadmap interface
     const roadmapData = {
       _id: roadmap._id,
-      title: roadmap.name, // Note: saved roadmaps use 'name' but IRoadmap expects 'title'
+      title: roadmap.title, // Use 'title' since that's what we save now
       level: roadmap.level || "beginner", // Provide default if not available
       roadmapType: roadmap.roadmapType || "topic-wise", // Provide default if not available
       nodes: roadmap.nodes || [],

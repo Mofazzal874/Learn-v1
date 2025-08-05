@@ -62,29 +62,70 @@ export async function PUT(req: Request) {
     const arrayField = suggestionType === 'course' ? 'suggestedCourse' : 'suggestedVideos';
     const idField = suggestionType === 'course' ? 'courseId' : 'videoId';
 
-    // Find existing suggestion
-    const existingSuggestionIndex = roadmap[arrayField].findIndex(
-      (item: any) => item[idField].toString() === suggestionId && item.nodeId === nodeId
-    );
+    try {
+      // Step 1: Ensure the roadmap has suggestion fields
+      if (!roadmap.suggestedCourse || !roadmap.suggestedVideos) {
+        console.log(`[SUGGESTION_STATUS] Adding missing suggestion fields to roadmap ${roadmapId}`);
+        
+        const updateFields: Record<string, unknown[]> = {};
+        if (!roadmap.suggestedCourse) updateFields.suggestedCourse = [];
+        if (!roadmap.suggestedVideos) updateFields.suggestedVideos = [];
+        
+        await Roadmap.updateOne(
+          { _id: roadmapId },
+          { $set: updateFields }
+        );
+        console.log(`[SUGGESTION_STATUS] Added missing fields to roadmap ${roadmapId}`);
+      }
 
-    if (existingSuggestionIndex !== -1) {
-      // Update existing suggestion
-      roadmap[arrayField][existingSuggestionIndex].status = status;
-      console.log(`[SUGGESTION_STATUS] Updated existing ${suggestionType} suggestion`);
-    } else {
-      // Add new suggestion
-      roadmap[arrayField].push({
-        [idField]: new mongoose.Types.ObjectId(suggestionId),
-        nodeId,
-        status
-      });
-      console.log(`[SUGGESTION_STATUS] Added new ${suggestionType} suggestion`);
+      // Step 2: Get current roadmap state
+      const currentRoadmap = await Roadmap.findById(roadmapId);
+      if (!currentRoadmap) {
+        return NextResponse.json(
+          { error: "Roadmap not found after update" },
+          { status: 404 }
+        );
+      }
+
+      // Step 3: Find existing suggestion
+      const suggestionArray = currentRoadmap[arrayField] || [];
+      const existingSuggestionIndex = suggestionArray.findIndex(
+        (item: { [key: string]: mongoose.Types.ObjectId | string; nodeId: string }) => 
+          item[idField].toString() === suggestionId && item.nodeId === nodeId
+      );
+
+      // Step 4: Update or add suggestion
+      if (existingSuggestionIndex !== -1) {
+        // Update existing suggestion
+        await Roadmap.updateOne(
+          { _id: roadmapId, [`${arrayField}._id`]: suggestionArray[existingSuggestionIndex]._id },
+          { $set: { [`${arrayField}.$.status`]: status } }
+        );
+        console.log(`[SUGGESTION_STATUS] Updated existing ${suggestionType} suggestion`);
+      } else {
+        // Add new suggestion
+        const newSuggestion = {
+          [idField]: new mongoose.Types.ObjectId(suggestionId),
+          nodeId,
+          status
+        };
+        
+        await Roadmap.updateOne(
+          { _id: roadmapId },
+          { $push: { [arrayField]: newSuggestion } }
+        );
+        console.log(`[SUGGESTION_STATUS] Added new ${suggestionType} suggestion`);
+      }
+
+      console.log(`[SUGGESTION_STATUS] Successfully updated ${suggestionType} suggestion status`);
+
+    } catch (updateError) {
+      console.error(`[SUGGESTION_STATUS] Error updating suggestion:`, updateError);
+      return NextResponse.json(
+        { error: "Failed to update suggestion status" },
+        { status: 500 }
+      );
     }
-
-    // Save the roadmap
-    await roadmap.save();
-
-    console.log(`[SUGGESTION_STATUS] Successfully updated ${suggestionType} suggestion status`);
 
     return NextResponse.json({
       success: true,

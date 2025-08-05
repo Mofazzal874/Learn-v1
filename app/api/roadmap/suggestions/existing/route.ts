@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/getSession";
 import connectDB from "@/lib/db";
 import { Roadmap } from "@/models/Roadmap";
+import mongoose from "mongoose";
 
 export async function POST(req: Request) {
   try {
@@ -37,17 +38,39 @@ export async function POST(req: Request) {
       );
     }
 
+    // Ensure the roadmap has suggestion fields (for backwards compatibility)
+    if (!roadmap.suggestedCourse || !roadmap.suggestedVideos) {
+      console.log(`[EXISTING_SUGGESTIONS] Adding missing suggestion fields to roadmap ${roadmapId}`);
+      
+      const updateFields: Record<string, unknown[]> = {};
+      if (!roadmap.suggestedCourse) updateFields.suggestedCourse = [];
+      if (!roadmap.suggestedVideos) updateFields.suggestedVideos = [];
+      
+      await Roadmap.updateOne(
+        { _id: roadmapId },
+        { $set: updateFields }
+      );
+      console.log(`[EXISTING_SUGGESTIONS] Added missing fields to roadmap ${roadmapId}`);
+      
+      // Get the updated roadmap
+      const updatedRoadmap = await Roadmap.findById(roadmapId);
+      if (updatedRoadmap) {
+        roadmap.suggestedCourse = updatedRoadmap.suggestedCourse || [];
+        roadmap.suggestedVideos = updatedRoadmap.suggestedVideos || [];
+      }
+    }
+
     // Filter suggestions for this specific node
-    const existingCourses = roadmap.suggestedCourse
-      .filter((suggestion: any) => suggestion.nodeId === nodeId)
-      .map((suggestion: any) => ({
+    const existingCourses = (roadmap.suggestedCourse || [])
+      .filter((suggestion: { nodeId: string; courseId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId)
+      .map((suggestion: { courseId: mongoose.Types.ObjectId; status: boolean }) => ({
         courseId: suggestion.courseId.toString(),
         status: suggestion.status
       }));
 
-    const existingVideos = roadmap.suggestedVideos
-      .filter((suggestion: any) => suggestion.nodeId === nodeId)
-      .map((suggestion: any) => ({
+    const existingVideos = (roadmap.suggestedVideos || [])
+      .filter((suggestion: { nodeId: string; videoId: mongoose.Types.ObjectId; status: boolean }) => suggestion.nodeId === nodeId)
+      .map((suggestion: { videoId: mongoose.Types.ObjectId; status: boolean }) => ({
         videoId: suggestion.videoId.toString(),
         status: suggestion.status
       }));
