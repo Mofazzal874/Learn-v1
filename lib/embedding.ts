@@ -32,6 +32,23 @@ const STOP_WORDS = new Set([
   'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall'
 ]);
 
+// Educational keywords that don't add semantic value to search
+// Only the most basic, repetitive words that interfere with similarity matching
+const EDUCATIONAL_NOISE_WORDS = new Set([
+  'introduction', 'intro', 'introductory',
+  'getting', 'started', 'start', 'starting',
+  'complete', 'comprehensive', 'full', 'total',
+  'tutorial', 'tutorials', 'guide', 'guides',
+  'course', 'courses', 'class', 'classes',
+  'lesson', 'lessons', 'lecture', 'lectures',
+  'chapter', 'chapters', 'section', 'sections',
+  'part', 'parts', 'module', 'modules',
+  'step', 'steps',
+  'learn', 'learning', 'study', 'studying',
+  'understanding', 'understand',
+  'example', 'examples'
+]);
+
 /**
  * Cleans node title by removing unwanted metadata suffixes
  * Removes everything after the first digit that's not part of initial numbering
@@ -132,10 +149,10 @@ export function preprocessText(text: string): string {
     .replace(/\s+/g, ' ')      // Normalize whitespace
     .trim();
 
-  // Remove stop words (optional - be careful not to over-remove)
+  // Remove stop words and educational noise words
   const words = processed.split(' ');
   const filteredWords = words.filter(word => 
-    word.length > 2 && !STOP_WORDS.has(word)
+    word.length > 2 && !STOP_WORDS.has(word) && !EDUCATIONAL_NOISE_WORDS.has(word)
   );
 
   processed = filteredWords.join(' ');

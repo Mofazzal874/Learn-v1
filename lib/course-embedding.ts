@@ -24,11 +24,33 @@ const EMBEDDING_CONFIG = {
   MAX_TEXT_LENGTH: 64000, // Much higher limit for embed-v4.0 (128k tokens ≈ 96k chars)
 } as const;
 
+// Performance optimization: Simple in-memory cache for query embeddings
+const QUERY_EMBEDDING_CACHE = new Map<string, { vector: number[]; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+const MAX_CACHE_SIZE = 100; // Maximum cache entries
+
 // Stop words to remove during preprocessing
 const STOP_WORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
   'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
   'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall'
+]);
+
+// Educational keywords that don't add semantic value to search
+// Only the most basic, repetitive words that interfere with similarity matching
+const EDUCATIONAL_NOISE_WORDS = new Set([
+  'introduction', 'intro', 'introductory',
+  'getting', 'started', 'start', 'starting',
+  'complete', 'comprehensive', 'full', 'total',
+  'tutorial', 'tutorials', 'guide', 'guides',
+  'course', 'courses', 'class', 'classes',
+  'lesson', 'lessons', 'lecture', 'lectures',
+  'chapter', 'chapters', 'section', 'sections',
+  'part', 'parts', 'module', 'modules',
+  'step', 'steps',
+  'learn', 'learning', 'study', 'studying',
+  'understanding', 'understand',
+  'example', 'examples'
 ]);
 
 /**
@@ -47,6 +69,48 @@ export function cleanHtmlText(text: string): string {
     // Clean up whitespace
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Cleans roadmap node query by removing unwanted suffixes like "roadmap5,h5,h", "AAAAWS" etc.
+ */
+export function cleanNodeQuery(query: string): string {
+  if (!query) return query;
+  
+  let cleaned = query;
+  
+  // Remove patterns like "roadmap5,h5,h" or "roadmap3,h3,h" 
+  cleaned = cleaned.replace(/roadmap\d+(?:\s*,\s*[h\d]+)*(?:\s*,\s*h)*/gi, 'roadmap');
+  
+  // Remove repeated letters like "AAAAWS" -> "AWS" (3+ consecutive same letters)
+  cleaned = cleaned.replace(/([A-Z])\1{2,}/g, '$1');
+  
+  // Remove standalone patterns like "5,h5,h" or "3,h3,h3,h"
+  cleaned = cleaned.replace(/\s+\d+(?:\s*,\s*[h\d]+)*(?:\s*,\s*h)*\s+/g, ' ');
+  cleaned = cleaned.replace(/^\d+(?:\s*,\s*[h\d]+)*(?:\s*,\s*h)*\s+/g, '');
+  cleaned = cleaned.replace(/\s+\d+(?:\s*,\s*[h\d]+)*(?:\s*,\s*h)*$/g, '');
+  
+  // Only remove immediate consecutive duplicates of the same word, not all duplicates
+  const words = cleaned.split(/\s+/);
+  const deduplicatedWords: string[] = [];
+  
+  for (let i = 0; i < words.length; i++) {
+    const currentWord = words[i];
+    const previousWord = i > 0 ? words[i - 1] : null;
+    
+    // Only skip if it's exactly the same as the previous word (case-insensitive)
+    if (currentWord.length > 0 && 
+        (!previousWord || currentWord.toLowerCase() !== previousWord.toLowerCase())) {
+      deduplicatedWords.push(currentWord);
+    }
+  }
+  
+  cleaned = deduplicatedWords.join(' ');
+  
+  // Clean up extra spaces and normalize
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
 }
 
 /**
@@ -115,10 +179,10 @@ export function preprocessText(text: string): string {
     .replace(/\s+/g, ' ')      // Normalize whitespace
     .trim();
 
-  // Remove stop words (optional - be careful not to over-remove)
+  // Remove stop words and educational noise words
   const words = processed.split(' ');
   const filteredWords = words.filter(word => 
-    word.length > 2 && !STOP_WORDS.has(word)
+    word.length > 2 && !STOP_WORDS.has(word) && !EDUCATIONAL_NOISE_WORDS.has(word)
   );
 
   processed = filteredWords.join(' ');
@@ -137,15 +201,47 @@ export function preprocessText(text: string): string {
 }
 
 /**
- * Generates embedding using Cohere API
+ * Cache management utilities
  */
-export async function generateEmbedding(text: string): Promise<number[]> {
+function cleanExpiredCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of QUERY_EMBEDDING_CACHE.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      QUERY_EMBEDDING_CACHE.delete(key);
+    }
+  }
+}
+
+function manageCacheSize(): void {
+  if (QUERY_EMBEDDING_CACHE.size > MAX_CACHE_SIZE) {
+    // Remove oldest entries
+    const entries = Array.from(QUERY_EMBEDDING_CACHE.entries());
+    entries.sort(([,a], [,b]) => a.timestamp - b.timestamp);
+    const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE + 10); // Remove a few extra
+    toRemove.forEach(([key]) => QUERY_EMBEDDING_CACHE.delete(key));
+  }
+}
+
+/**
+ * Generates embedding using Cohere API with caching optimization
+ */
+export async function generateEmbedding(text: string, useCache: boolean = false): Promise<number[]> {
   if (!process.env.COHERE_API_KEY) {
     throw new Error('COHERE_API_KEY environment variable is required');
   }
 
   if (!text || text.trim().length === 0) {
     throw new Error('Text content is required for embedding generation');
+  }
+
+  // Check cache for queries only (not for document embeddings)
+  if (useCache) {
+    cleanExpiredCache();
+    const cached = QUERY_EMBEDDING_CACHE.get(text);
+    if (cached) {
+      console.log(`[COURSE_EMBEDDING] Cache hit for text: "${text.substring(0, 50)}..."`);
+      return cached.vector;
+    }
   }
 
   try {
@@ -164,31 +260,46 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
     // Handle the response structure for embed-v4.0 (embeddings are nested by type)
     const embeddings = response.embeddings;
+    let vector: number[] | null = null;
     
     // For embed-v4.0, the embeddings are structured as: { float: [[...]], int8: [[...]], etc. }
     if (embeddings && typeof embeddings === 'object') {
       // Try to get float embeddings first (default)
       if ('float' in embeddings && Array.isArray(embeddings.float) && embeddings.float.length > 0) {
         console.log(`[COURSE_EMBEDDING] Generated embedding with ${embeddings.float[0].length} dimensions`);
-        return embeddings.float[0] as number[];
-      }
-      
-      // If no float embeddings, try other types
-      for (const [key, value] of Object.entries(embeddings)) {
-        if (Array.isArray(value) && value.length > 0) {
-          console.log(`[COURSE_EMBEDDING] Generated embedding with ${value[0].length} dimensions (type: ${key})`);
-          return value[0] as number[];
+        vector = embeddings.float[0] as number[];
+      } else {
+        // If no float embeddings, try other types
+        for (const [key, value] of Object.entries(embeddings)) {
+          if (Array.isArray(value) && value.length > 0) {
+            console.log(`[COURSE_EMBEDDING] Generated embedding with ${value[0].length} dimensions (type: ${key})`);
+            vector = value[0] as number[];
+            break;
+          }
         }
       }
     }
     
     // Fallback for older API versions or unexpected structure
-    if (Array.isArray(embeddings) && embeddings.length > 0) {
+    if (!vector && Array.isArray(embeddings) && embeddings.length > 0) {
       console.log(`[COURSE_EMBEDDING] Generated embedding with ${embeddings[0].length} dimensions (legacy format)`);
-      return embeddings[0] as number[];
+      vector = embeddings[0] as number[];
     }
     
-    throw new Error('Unexpected embedding response structure');
+    if (!vector) {
+      throw new Error('Unexpected embedding response structure');
+    }
+
+    // Cache the result for queries only
+    if (useCache) {
+      manageCacheSize();
+      QUERY_EMBEDDING_CACHE.set(text, {
+        vector: vector,
+        timestamp: Date.now()
+      });
+    }
+    
+    return vector;
   } catch (error: any) {
     console.error('[COURSE_EMBEDDING] Cohere embedding generation failed:', error);
     throw new Error(`Embedding generation failed: ${error.message}`);
@@ -402,7 +513,12 @@ export async function deleteCourseEmbedding(courseId: string, userId: string): P
  */
 export async function searchSuggestedCourses(
   query: string,
-  topK: number = 5
+  topK: number = 5,
+  similarityThreshold?: number, // Optional - will use env variable if not provided
+  filters?: {
+    category?: string;
+    level?: string;
+  }
 ): Promise<Array<{
   courseId: string;
   title: string;
@@ -422,26 +538,46 @@ export async function searchSuggestedCourses(
     throw new Error('Query text is required');
   }
 
+  // Use environment variable for threshold if not provided
+  const threshold = similarityThreshold ?? parseFloat(process.env.COSINE_SIM_THRESHOLD || '0.45');
+
   try {
-    console.log(`[COURSE_SEARCH] Searching for courses related to: "${query}"`);
+    console.log(`[COURSE_SEARCH] Searching for courses related to: "${query}" (threshold: ${threshold})`);
+    
+    // Clean query from roadmap node suffixes (like "roadmap5,h5,h", "AAAAWS")
+    const cleanedQuery = cleanNodeQuery(query);
     
     // Generate embedding for the search query using the same preprocessing
-    const processedQuery = preprocessText(query);
-    const queryVector = await generateEmbedding(processedQuery);
+    const processedQuery = preprocessText(cleanedQuery);
+    const queryVector = await generateEmbedding(processedQuery, false); // Disable caching to avoid issues
     
+    console.log(`[COURSE_SEARCH] Query cleaned: "${cleanedQuery}" -> processed: "${processedQuery.substring(0, 50)}..."`);
     console.log(`[COURSE_SEARCH] Generated query embedding with ${queryVector.length} dimensions`);
     
-    // Search in Pinecone
+    // Search in Pinecone with higher topK to filter by threshold later
     const index = pinecone.index(process.env.PINECONE_INDEX_NAME);
     const namespace = index.namespace(EMBEDDING_CONFIG.PINECONE_NAMESPACE);
     
+    // Build filter object with optional category and level filtering
+    const pineconeFilter: any = {
+      entityType: 'course'  // Only search for courses
+    };
+    
+    if (filters?.category) {
+      pineconeFilter.category = filters.category;
+    }
+    
+    if (filters?.level) {
+      pineconeFilter.level = filters.level;
+    }
+
     const searchResults = await namespace.query({
       vector: queryVector,
-      topK,
+      topK: Math.max(topK * 3, 15), // Get more results to apply threshold filtering
       includeMetadata: true,
-      filter: {
-        entityType: 'course'  // Only search for courses
-      }
+      filter: pineconeFilter,
+      // Performance optimization: Return only essential metadata to reduce bandwidth
+      includeValues: false, // We don't need the vector values in response
     });
 
     if (!searchResults.matches || searchResults.matches.length === 0) {
@@ -449,16 +585,22 @@ export async function searchSuggestedCourses(
       return [];
     }
 
-    console.log(`[COURSE_SEARCH] Found ${searchResults.matches.length} matching courses`);
+    // Apply similarity threshold filtering and limit results
+    const filteredResults = searchResults.matches
+      .filter(match => (match.score || 0) >= threshold)
+      .slice(0, topK)
+      .map(match => ({
+        courseId: match.metadata?.courseId as string || match.metadata?.sourceId as string,
+        title: match.metadata?.title as string || 'Unknown Title',
+        category: match.metadata?.category as string || 'Unknown Category',
+        level: match.metadata?.level as string || 'Unknown Level',
+        score: match.score || 0
+      }))
+      .filter(result => result.courseId); // Filter out any results without courseId
+
+    console.log(`[COURSE_SEARCH] Found ${searchResults.matches.length} courses, ${filteredResults.length} above threshold (${threshold})`);
     
-    // Process and return results
-    return searchResults.matches.map(match => ({
-      courseId: match.metadata?.courseId as string || match.metadata?.sourceId as string,
-      title: match.metadata?.title as string || 'Unknown Title',
-      category: match.metadata?.category as string || 'Unknown Category',
-      level: match.metadata?.level as string || 'Unknown Level',
-      score: match.score || 0
-    })).filter(result => result.courseId); // Filter out any results without courseId
+    return filteredResults;
 
   } catch (error: unknown) {
     console.error('[COURSE_SEARCH] Search failed:', error);

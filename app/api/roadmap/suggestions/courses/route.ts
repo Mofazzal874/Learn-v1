@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { query, topK = 5, roadmapId, nodeId } = body;
+    const { query, topK = 5, roadmapId, nodeId, similarityThreshold } = body;
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
@@ -25,10 +25,11 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(`[COURSE_SUGGESTIONS_API] Searching for courses with query: "${query}"`);
+    const threshold = similarityThreshold ?? parseFloat(process.env.COSINE_SIM_THRESHOLD || '0.45');
+    console.log(`[COURSE_SUGGESTIONS_API] Searching for courses with query: "${query}" (threshold: ${threshold})`);
 
     // Search for similar courses using embeddings
-    const searchResults = await searchSuggestedCourses(query, topK);
+    const searchResults = await searchSuggestedCourses(query, topK, similarityThreshold);
 
     if (searchResults.length === 0) {
       console.log('[COURSE_SUGGESTIONS_API] No courses found');

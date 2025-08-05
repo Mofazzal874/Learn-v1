@@ -572,8 +572,28 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-4 space-y-3">
                   <p className="text-sm text-gray-400">No courses found for this topic</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCoursesFetched(false);
+                      setHasExistingSuggestions(false);
+                      fetchSuggestedCourses();
+                    }}
+                    disabled={loadingCourses || !roadmapId}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                  >
+                    {loadingCourses ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      'Search Again'
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
@@ -680,8 +700,28 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-4 space-y-3">
                   <p className="text-sm text-gray-400">No videos found for this topic</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setVideosFetched(false);
+                      setHasExistingSuggestions(false);
+                      fetchSuggestedVideos();
+                    }}
+                    disabled={loadingVideos || !roadmapId}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                  >
+                    {loadingVideos ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      'Search Again'
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
