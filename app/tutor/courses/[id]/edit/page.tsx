@@ -378,8 +378,10 @@ formData.append('outcomes', JSON.stringify(courseData.outcomes || []));
               outcomes: courseData.outcomes || [], // Add this
               sections: curriculumData,
               pricing: pricingData,
-              thumbnailUrl: courseData.thumbnailAsset?.secure_url || null,
-              previewVideoUrl: courseData.previewVideoAsset?.secure_url || null
+              thumbnail: null, // Pass null for File since we're editing
+              previewVideo: null, // Pass null for File since we're editing
+              thumbnailAsset: courseData.thumbnailAsset,
+              previewVideoAsset: courseData.previewVideoAsset
             }}
             courseId={id}
             onBack={() => setCurrentStep(2)}

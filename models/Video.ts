@@ -52,7 +52,7 @@ const videoSchema = new Schema({
 
 // Create indexes
 videoSchema.index({ title: 'text', description: 'text', tags: 'text' });
-videoSchema.index({ slug: 1 });
+// Note: slug index is already created by unique: true in schema definition
 videoSchema.index({ userId: 1 });
 videoSchema.index({ category: 1 });
 videoSchema.index({ published: 1 });
