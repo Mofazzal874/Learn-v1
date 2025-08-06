@@ -17,11 +17,12 @@ async function getCourse(id: string) {
   return course;
 }
 
-export default async function CourseContent({ params }: { params: { id: string } }) {
+export default async function CourseContent({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const course = await getCourse(params.id);
+  const { id } = await params;
+  const course = await getCourse(id);
 
   // Ensure the tutor owns this course
   if (course.tutorId.toString() !== session.user.id) {

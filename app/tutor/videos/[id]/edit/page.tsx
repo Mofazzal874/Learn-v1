@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { updateVideo, VideoFormData } from '@/app/actions/video';
@@ -42,8 +42,9 @@ interface Video {
   };
 }
 
-export default function EditVideoPage({ params }: { params: { id: string } }) {
+export default function EditVideoPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = React.use(params);
   const [video, setVideo] = useState<Video | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +52,7 @@ export default function EditVideoPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function fetchVideo() {
       try {
-        const response = await fetch(`/api/videos/${params.id}`);
+        const response = await fetch(`/api/videos/${id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch video');
         }
@@ -67,16 +68,16 @@ export default function EditVideoPage({ params }: { params: { id: string } }) {
     }
 
     fetchVideo();
-  }, [params.id, router]);
+  }, [id, router]);
 
   const handleUpdateVideo = async (videoData: VideoFormData) => {
     try {
       setIsSubmitting(true);
       
-      await updateVideo(params.id, videoData);
+      await updateVideo(id, videoData);
       
       toast.success('Video updated successfully!');
-      router.push(`/tutor/videos/${params.id}`);
+      router.push(`/tutor/videos/${id}`);
     } catch (error: unknown) {
       console.error('Failed to update video:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update video. Please try again.';

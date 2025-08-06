@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from "@/auth";
 import { Card } from "@/components/ui/card";
@@ -68,8 +68,9 @@ interface PricingData {
   isFree: boolean;
 }
 
-export default function EditCoursePage({ params }: { params: { id: string } }) {
+export default function EditCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = React.use(params);
   const [currentStep, setCurrentStep] = useState(0);
   const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -99,7 +100,7 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function fetchCourse() {
       try {
-        const response = await fetch(`/api/courses/${params.id}`);
+        const response = await fetch(`/api/courses/${id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch course');
         }
@@ -160,7 +161,7 @@ export default function EditCoursePage({ params }: { params: { id: string } }) {
     }
 
     fetchCourse();
-  }, [params.id, router]);
+  }, [id, router]);
 
   // Add a useEffect cleanup for object URLs to prevent memory leaks
   useEffect(() => {
@@ -277,10 +278,10 @@ formData.append('outcomes', JSON.stringify(courseData.outcomes || []));
       
       try {
         // Call the update course action
-        const result = await updateCourse(params.id, formData);
+        const result = await updateCourse(id, formData);
         
         toast.success('Course updated successfully!');
-        router.push(`/tutor/courses/${params.id}`);
+        router.push(`/tutor/courses/${id}`);
       } catch (apiError) {
         console.error('API error:', apiError);
         const errorMessage = apiError instanceof Error ? apiError.message : 'Server error occurred. Please try again.';
@@ -377,10 +378,10 @@ formData.append('outcomes', JSON.stringify(courseData.outcomes || []));
               outcomes: courseData.outcomes || [], // Add this
               sections: curriculumData,
               pricing: pricingData,
-              thumbnail: courseData.thumbnailAsset?.secure_url || null,
-              previewVideo: courseData.previewVideoAsset?.secure_url || null
+              thumbnailUrl: courseData.thumbnailAsset?.secure_url || null,
+              previewVideoUrl: courseData.previewVideoAsset?.secure_url || null
             }}
-            courseId={params.id}
+            courseId={id}
             onBack={() => setCurrentStep(2)}
             onPublish={handleUpdate}
             isSubmitting={isSubmitting}

@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 
 async function deleteCourseHandler(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     // Verify authentication
@@ -19,7 +19,9 @@ async function deleteCourseHandler(
 
     await connectDB();
 
-    const courseId = params.id;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const courseId = resolvedParams.id;
     
     // Validate ID format
     if (!mongoose.Types.ObjectId.isValid(courseId)) {

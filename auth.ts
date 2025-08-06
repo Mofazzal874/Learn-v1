@@ -1,23 +1,15 @@
-import NextAuth, { CredentialsSignin } from "next-auth";
+import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Github from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
+import { authConfig } from "./auth.config";
 import connectDB from "./lib/db";
 import { User } from "./models/User";
 import { compare } from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   providers: [
-    Github({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }),
-
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-
+    ...authConfig.providers,
+    
     Credentials({
       name: "Credentials",
 
@@ -124,7 +116,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!alreadyUser) {
             // Get the intended role from cookies or default to 'user'
             const { cookies } = await import('next/headers');
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             const selectedRole = cookieStore.get('selected-role')?.value || 'user';
             
             const [firstName = "", lastName = ""] = (name || "").split(" ");
@@ -154,7 +146,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!alreadyUser) {
             // Get the intended role from cookies or default to 'user'
             const { cookies } = await import('next/headers');
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             const selectedRole = cookieStore.get('selected-role')?.value || 'user';
             
             const [firstName = "", lastName = ""] = (name || "").split(" ");

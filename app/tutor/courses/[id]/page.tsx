@@ -26,6 +26,7 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
+import Image from "next/image";
 
 async function getCourse(id: string) {
   await connectDB();
@@ -41,17 +42,18 @@ async function getCourse(id: string) {
   }
 }
 
-export default async function TutorCourseDetails({ params }: { params: { id: string } }) {
+export default async function TutorCourseDetails({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) return redirect("/login");
   
-  const course = await getCourse(params.id);
+  const { id } = await params;
+  const course = await getCourse(id);
   if (!course) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Course Not Found</h1>
-          <p className="text-gray-400 mb-6">The course you're looking for doesn't exist or you don't have access to it.</p>
+          <p className="text-gray-400 mb-6">The course you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
           <Link href="/tutor/courses">
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               Back to Courses
@@ -69,7 +71,7 @@ export default async function TutorCourseDetails({ params }: { params: { id: str
 
   // Calculate total lessons
   const totalLessons = course.sections?.reduce(
-    (sum, section) => sum + (section.lessons?.length || 0), 
+    (sum: number, section: any) => sum + (section.lessons?.length || 0), 
     0
   ) || 0;
 
@@ -79,35 +81,36 @@ export default async function TutorCourseDetails({ params }: { params: { id: str
   const averageRating = course.rating || 0;
 
   // Replace the parseArrayData function with this:
-const parseArrayData = (data: any): string[] => {
-  if (!data) return [];
-  
-  // If it's already an array, return it
-  if (Array.isArray(data)) return data;
-  
-  // If it's a string, try to parse it as JSON
-  if (typeof data === 'string') {
-    try {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        return parsed;
+  const parseArrayData = (data: any): string[] => {
+    if (!data) return [];
+    
+    // If it's already an array, return it
+    if (Array.isArray(data)) return data;
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // If JSON parsing fails, return as single item
+        return [data];
       }
-    } catch {
-      // If JSON parsing fails, return as single item
-      return [data];
     }
-  }
-  
-  return [];
-};
+    
+    return [];
+  };
 
   const prerequisites = parseArrayData(course.prerequisites);
   const outcomes = parseArrayData(course.outcomes);
 
   console.log('Raw course.prerequisites:', course.prerequisites);
-console.log('Raw course.outcomes:', course.outcomes);
-console.log('Parsed prerequisites:', prerequisites);
-console.log('Parsed outcomes:', outcomes);
+  console.log('Raw course.outcomes:', course.outcomes);
+  console.log('Parsed prerequisites:', prerequisites);
+  console.log('Parsed outcomes:', outcomes);
+  
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <div className="p-8">
@@ -142,13 +145,13 @@ console.log('Parsed outcomes:', outcomes);
           </div>
 
           <div className="flex gap-3">
-            <Link href={`/tutor/courses/${params.id}/content`}>
+            <Link href={`/tutor/courses/${id}/content`}>
               <Button variant="outline" className="border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
                 <Layout className="h-4 w-4 mr-2" />
                 Course Content
               </Button>
             </Link>
-            <Link href={`/tutor/courses/${params.id}/edit`}>
+            <Link href={`/tutor/courses/${id}/edit`}>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Course
@@ -171,7 +174,7 @@ console.log('Parsed outcomes:', outcomes);
                     poster={course.thumbnail}
                   />
                 ) : course.thumbnail ? (
-                  <img 
+                  <Image
                     src={course.thumbnail} 
                     alt={course.title} 
                     className="w-full h-full object-cover"
@@ -227,12 +230,12 @@ console.log('Parsed outcomes:', outcomes);
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {course.sections?.map((section, index) => (
+                  {course.sections?.map((section: any, index: number) => (
                     <div key={index}>
                       <h3 className="text-md font-semibold text-white mb-2">{section.title}</h3>
                       <p className="text-sm text-gray-400 mb-2">{section.description}</p>
                       <div className="space-y-1 pl-4">
-                        {section.lessons?.map((lesson, lessonIndex) => (
+                        {section.lessons?.map((lesson: any, lessonIndex: number) => (
                           <div key={lessonIndex} className="text-sm text-gray-300 py-1 flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                             <span>{lesson.title}</span>
@@ -250,7 +253,7 @@ console.log('Parsed outcomes:', outcomes);
                       <BookOpen className="mx-auto h-12 w-12 text-gray-600 mb-3" />
                       <h3 className="text-gray-300 mb-2">No content yet</h3>
                       <p className="text-sm text-gray-500 mb-4">Add sections and lessons to your course</p>
-                      <Link href={`/tutor/courses/${params.id}/content`}>
+                      <Link href={`/tutor/courses/${id}/content`}>
                         <Button className="bg-blue-600 hover:bg-blue-700">
                           <Plus className="h-4 w-4 mr-2" />
                           Add Course Content
@@ -413,24 +416,24 @@ console.log('Parsed outcomes:', outcomes);
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Link href={`/tutor/courses/${params.id}/content`}>
+                  <Link href={`/tutor/courses/${id}/content`}>
                     <Button className="w-full bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
                       <Layout className="h-4 w-4 mr-2" />
                       Manage Content
                     </Button>
                   </Link>
-                  <Link href={`/tutor/courses/${params.id}/edit`}>
+                  <Link href={`/tutor/courses/${id}/edit`}>
                     <Button className="w-full bg-green-500/10 text-green-400 hover:bg-green-500/20">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Details
                     </Button>
                   </Link>
                   <PublishUnpublishButtons 
-                    courseId={params.id} 
+                    courseId={id} 
                     published={course.published} 
                   />
                   <DeleteCourseButton 
-                    courseId={params.id}
+                    courseId={id}
                     courseName={course.title}
                     variant="button"
                     className="w-full"

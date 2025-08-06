@@ -18,11 +18,12 @@ async function getVideo(id: string, userId: string) {
   return video ? JSON.parse(JSON.stringify(video)) : null;
 }
 
-export default async function UserVideoDetails({ params }: { params: { id: string } }) {
+export default async function UserVideoDetails({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) return redirect("/login");
 
-  const video = await getVideo(params.id, session.user.id);
+  const { id } = await params;
+  const video = await getVideo(id, session.user.id);
   
   if (!video) {
     return (
