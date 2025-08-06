@@ -1,30 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-// Lazy load the Spline component
-const Spline = dynamic(() => import('@splinetool/react-spline'), {
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-  ),
-  ssr: false
-});
 
 export default function HeroSection() {
   return (
     <section className="relative h-screen">
-      {/* Spline Scene Container */}
-      <div className="absolute inset-0">
-        <Spline 
-          scene="https://prod.spline.design/L9XQtcBkCJ3oqWv7/scene.splinecode"
-        />
-      </div>
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-gray-900 to-black"></div>
 
       {/* Content Overlay */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full bg-gradient-to-b from-black/50 via-black/30 to-black/80 text-white">
+      <div className="relative z-10 flex flex-col items-center justify-center h-full text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white drop-shadow-lg">
             Learn Anything with AI
