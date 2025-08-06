@@ -20,6 +20,7 @@ import { Course } from "@/models/Course";
 import { UserProgress } from "@/models/UserProgress";
 import CourseRating from "./components/CourseRating";
 import CourseReviews from "./components/CourseReviews";
+import { parseCourseData } from "@/lib/utils/course-data";
 
 // Function to get course from the database
 async function getCourse(id: string) {
@@ -65,7 +66,8 @@ interface CoursePageProps {
 export default async function CourseDetailsPage({ params }: CoursePageProps) {
   const session = await auth();
   const resolvedParams = await params;
-  const course = await getCourse(resolvedParams.id);
+  const rawCourse = await getCourse(resolvedParams.id);
+  const course = rawCourse ? parseCourseData(rawCourse) : null;
   const isEnrolled = session?.user?.id ? await checkEnrollment(session.user.id, resolvedParams.id) : false;
 
   if (!course) {
@@ -370,9 +372,11 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                       <div className="w-full bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg p-3 text-center">
                         ✓ You&apos;re enrolled in this course
                       </div>
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                        Continue Learning
-                      </Button>
+                      <Link href={`/courses/${resolvedParams.id}/learn`}>
+                        <Button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
+                          Continue Learning
+                        </Button>
+                      </Link>
                     </div>
                   ) : session ? (
                     <Link href={`/courses/${resolvedParams.id}/enroll`}>

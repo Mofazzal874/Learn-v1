@@ -27,6 +27,7 @@ import { Course } from "@/models/Course";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import Image from "next/image";
+import { parseCourseData } from "@/lib/utils/course-data";
 
 async function getCourse(id: string) {
   await connectDB();
@@ -47,7 +48,8 @@ export default async function TutorCourseDetails({ params }: { params: Promise<{
   if (!session) return redirect("/login");
   
   const { id } = await params;
-  const course = await getCourse(id);
+  const rawCourse = await getCourse(id);
+  const course = rawCourse ? parseCourseData(rawCourse) : null;
   if (!course) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
@@ -80,36 +82,9 @@ export default async function TutorCourseDetails({ params }: { params: Promise<{
   const totalRevenue = course.price * (course.totalStudents || 0);
   const averageRating = course.rating || 0;
 
-  // Replace the parseArrayData function with this:
-  const parseArrayData = (data: any): string[] => {
-    if (!data) return [];
-    
-    // If it's already an array, return it
-    if (Array.isArray(data)) return data;
-    
-    // If it's a string, try to parse it as JSON
-    if (typeof data === 'string') {
-      try {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // If JSON parsing fails, return as single item
-        return [data];
-      }
-    }
-    
-    return [];
-  };
-
-  const prerequisites = parseArrayData(course.prerequisites);
-  const outcomes = parseArrayData(course.outcomes);
-
-  console.log('Raw course.prerequisites:', course.prerequisites);
-  console.log('Raw course.outcomes:', course.outcomes);
-  console.log('Parsed prerequisites:', prerequisites);
-  console.log('Parsed outcomes:', outcomes);
+  // Prerequisites and outcomes are now properly parsed by parseCourseData
+  const prerequisites = course.prerequisites || [];
+  const outcomes = course.outcomes || [];
   
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -274,7 +249,7 @@ export default async function TutorCourseDetails({ params }: { params: Promise<{
                 <CardContent>
                   <ul className="space-y-2">
                     {prerequisites.length > 0 ? (
-                      prerequisites.map((prerequisite, index) => (
+                      prerequisites.map((prerequisite: string, index: number) => (
                         <li key={index} className="text-gray-300 flex items-start gap-2">
                           <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
                           <span>{prerequisite}</span>
@@ -294,7 +269,7 @@ export default async function TutorCourseDetails({ params }: { params: Promise<{
                 <CardContent>
                   <ul className="space-y-2">
                     {outcomes.length > 0 ? (
-                      outcomes.map((outcome, index) => (
+                      outcomes.map((outcome: string, index: number) => (
                         <li key={index} className="text-gray-300 flex items-start gap-2">
                           <Target className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                           <span>{outcome}</span>

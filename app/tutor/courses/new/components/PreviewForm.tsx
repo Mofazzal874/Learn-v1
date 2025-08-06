@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { parseStringArray } from "@/lib/utils/course-data";
 
 interface PreviewFormProps {
   courseData: {
@@ -251,13 +252,13 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
             </div>
 
             {/* Prerequisites and Outcomes */}
-            {(courseData.prerequisites?.length > 0 || courseData.outcomes?.length > 0) && (
+            {(parseStringArray(courseData.prerequisites)?.length > 0 || parseStringArray(courseData.outcomes)?.length > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {courseData.prerequisites?.length > 0 && (
+                {parseStringArray(courseData.prerequisites)?.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-3">Prerequisites</h3>
                     <ul className="space-y-2">
-                      {courseData.prerequisites.map((prerequisite, index) => (
+                      {parseStringArray(courseData.prerequisites).map((prerequisite, index) => (
                         <li key={index} className="flex items-start gap-2 text-gray-400">
                           <CheckCircle className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                           <span>{prerequisite}</span>
@@ -267,11 +268,11 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                   </div>
                 )}
                 
-                {courseData.outcomes?.length > 0 && (
+                {parseStringArray(courseData.outcomes)?.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-3">What You&apos;ll Learn</h3>
                     <ul className="space-y-2">
-                      {courseData.outcomes.map((outcome, index) => (
+                      {parseStringArray(courseData.outcomes).map((outcome, index) => (
                         <li key={index} className="flex items-start gap-2 text-gray-400">
                           <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
                           <span>{outcome}</span>
