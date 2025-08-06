@@ -4,11 +4,9 @@
 import React, { useState, useCallback, useEffect } from "react";
 import ReactFlow, {
   addEdge,
-  MiniMap,
   Controls,
   Background,
   Connection,
-  Edge as ReactFlowEdge,
   useNodesState,
   useEdgesState,
   OnConnect,
@@ -17,7 +15,6 @@ import ReactFlow, {
   Panel,
   Position,
   MarkerType,
-  EdgeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { RoadmapNode, RoadmapEdge } from "../types";
@@ -52,19 +49,18 @@ interface RoadmapCanvasProps {
 }
 
 // Add this helper function at the top of the file (before the component)
-const ensureStringTitle = (title: any): string => {
+const ensureStringTitle = (title: string | React.ReactNode): string => {
   if (typeof title === 'string') {
     return title;
   }
   if (title && typeof title === 'object') {
     // Handle React elements in the title
-    if (title.props && title.props.children) {
+    if ('props' in title && typeof title.props === 'object' && title.props && 'children' in title.props) {
       const children = title.props.children;
       if (Array.isArray(children)) {
         // If children is an array, try to extract text content
-        return children.map(child => 
-          typeof child === 'string' ? child : 
-          (child && child.props && child.props.children) || ''
+        return children.map((child: unknown) => 
+          typeof child === 'string' ? child : ''
         ).join('');
       } else if (typeof children === 'string') {
         return children;
@@ -142,16 +138,16 @@ const mapReactFlowEdgesToRoadmapEdges = (reactFlowEdges: Edge[]): RoadmapEdge[] 
   }));
 };
 
-const nodeStyle = {
+const getNodeStyle = (completed: boolean = false) => ({
   padding: '8px',
   borderRadius: '8px',
-  border: '2px solid #e2e8f0',
-  background: 'white',
+  border: `2px solid ${completed ? '#22c55e' : '#e2e8f0'}`,
+  background: completed ? '#dcfce7' : 'white',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   width: 140,
   fontSize: '11px',
   textAlign: 'center' as const,
-};
+});
 
 const edgeStyle = {
   stroke: '#94a3b8',
@@ -184,7 +180,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
 
   const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes).map(node => ({
     ...node,
-    style: nodeStyle,
+    style: getNodeStyle(node.data.completed),
     sourcePosition: Position.Bottom,
     targetPosition: Position.Top,
     data: {
@@ -216,7 +212,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   );
 
   // Handle node click
-  const onNodeClick = (_: React.MouseEvent, node: Node<any, any>) => {
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
     const roadmapNode = nodes.find((n) => n.id === node.id);
     if (roadmapNode) {
       setSelectedNode(roadmapNode);
@@ -226,7 +222,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
 
   // Modify the onNodeDragStopHandler to maintain tree structure
   const onNodeDragStopHandler = useCallback(
-    (event: React.MouseEvent, node: Node<any, any>) => {
+    (event: React.MouseEvent, node: Node) => {
       if (readOnly) return;
       const updatedNodes = rfNodes.map((n) =>
         n.id === node.id ? { ...n, position: node.position } : n
@@ -281,9 +277,15 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
         n.id === updatedNode.id
           ? {
               ...n,
+              style: getNodeStyle(updatedNode.completed), // Update styling based on completed status
               data: {
                 ...n.data,
-                label: title,
+                label: (
+                  <div className="overflow-hidden">
+                    <div className="font-semibold mb-1 truncate">{title}</div>
+                    <div className="text-xs text-gray-500">{updatedNode.timeNeeded}h</div>
+                  </div>
+                ),
                 description: updatedNode.description,
                 completed: updatedNode.completed,
                 completionTime: updatedNode.completionTime,

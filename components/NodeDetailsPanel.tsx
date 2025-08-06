@@ -35,8 +35,9 @@ const ensureStringTitle = (title: string | React.ReactNode): string => {
 
 // Function to clean unwanted patterns from title
 const cleanTitle = (title: string): string => {
-  // Remove patterns like "4,h4,h4,h4,h4,h4,h" - number followed by comma and h+ patterns
-  return title.replace(/^\d+,(?:h\d*,?)+\s*/, '').trim();
+  // Remove patterns like "4,h4,h4,h4,h4,h4,h" or "5,h5,h5,h5,h5,h" 
+  // This matches patterns at the end: number followed by comma and h+number+comma sequences
+  return title.replace(/\d+,(?:h\d*,?)*h?\d*$/, '').trim();
 };
 
 
@@ -501,7 +502,18 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             id="deadline"
             name="deadline"
             type="date"
-            value={fixedNode.deadline || ""}
+            value={(() => {
+              if (!fixedNode.deadline) return "";
+              const deadline = fixedNode.deadline;
+              try {
+                if (deadline && typeof deadline === 'object' && 'toISOString' in deadline) {
+                  return (deadline as Date).toISOString().split('T')[0];
+                }
+              } catch {
+                // Fallback if it's not a valid Date object
+              }
+              return String(deadline).split('T')[0];
+            })()}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"
           />
