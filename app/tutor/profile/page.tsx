@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState,useEffect } from "react";
 import { toast } from "react-toastify";
 import { Camera, Mail, MapPin, Phone, GraduationCap, Award, Star, Users, User, Pencil } from "lucide-react";
+import Image from "next/image";
 
 export default function TutorProfilePage() {
  
@@ -121,7 +122,7 @@ export default function TutorProfilePage() {
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-[#141414] border-4 border-[#0a0a0a] flex items-center justify-center">
               {user?.image ? (
-                  <img
+                  <Image
                     src={user.image}
                     alt="Profile"
                     className="w-full h-full object-cover rounded-full"

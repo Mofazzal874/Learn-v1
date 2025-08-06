@@ -17,7 +17,7 @@ export default async function TutorDashboard() {
           <div className="flex justify-between items-start mb-8">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Welcome back, {session.user.firstName}! 👋</h1>
-              <p className="text-gray-400">Here's what's happening with your courses today.</p>
+              <p className="text-gray-400">Here&apos;s what&apos;s happening with your courses today.</p>
             </div>
             <Link href="/tutor/courses/new">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
