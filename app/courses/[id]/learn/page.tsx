@@ -500,56 +500,56 @@ export default function CourseLearnPage() {
                       </div>
                     )}
 
-                    {/* Video Link */}
-                    {selectedLesson.videoLink && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-2">Video Content</h3>
-                        <div className="bg-[#0a0a0a] rounded-lg p-4 border border-gray-800">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Play className="h-5 w-5 text-blue-400" />
-                              <span className="text-gray-300">Watch this lesson</span>
-                            </div>
-                            <a
-                              href={selectedLesson.videoLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                                         {/* Video Link */}
+                     {selectedLesson.videoLink && (
+                       <div>
+                         <h3 className="text-lg font-semibold text-white mb-2">Video Content</h3>
+                         <div className="bg-[#0a0a0a] rounded-lg p-4 border border-gray-800">
+                           <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                               <Play className="h-5 w-5 text-blue-400" />
+                               <span className="text-gray-300">Watch this lesson</span>
+                             </div>
+                             <a
+                               href={selectedLesson.videoLink.startsWith('http') ? selectedLesson.videoLink : `https://${selectedLesson.videoLink}`}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="text-blue-400 hover:text-blue-300 transition-colors"
+                             >
+                               <ExternalLink className="h-4 w-4" />
+                             </a>
+                           </div>
+                         </div>
+                       </div>
+                     )}
 
-                    {/* Assignment */}
-                    {(selectedLesson.assignmentLink || selectedLesson.assignmentDescription) && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-2">Assignment</h3>
-                        <div className="bg-[#0a0a0a] rounded-lg p-4 border border-gray-800 space-y-3">
-                          {selectedLesson.assignmentDescription && (
-                            <p className="text-gray-300">{selectedLesson.assignmentDescription}</p>
-                          )}
-                          {selectedLesson.assignmentLink && (
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Download className="h-5 w-5 text-green-400" />
-                                <span className="text-gray-300">Download assignment materials</span>
-                              </div>
-                              <a
-                                href={selectedLesson.assignmentLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-green-400 hover:text-green-300 transition-colors"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                     {/* Assignment */}
+                     {(selectedLesson.assignmentLink || selectedLesson.assignmentDescription) && (
+                       <div>
+                         <h3 className="text-lg font-semibold text-white mb-2">Assignment</h3>
+                         <div className="bg-[#0a0a0a] rounded-lg p-4 border border-gray-800 space-y-3">
+                           {selectedLesson.assignmentDescription && (
+                             <p className="text-gray-300">{selectedLesson.assignmentDescription}</p>
+                           )}
+                           {selectedLesson.assignmentLink && (
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                 <Download className="h-5 w-5 text-green-400" />
+                                 <span className="text-gray-300">Download assignment materials</span>
+                               </div>
+                               <a
+                                 href={selectedLesson.assignmentLink.startsWith('http') ? selectedLesson.assignmentLink : `https://${selectedLesson.assignmentLink}`}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="text-green-400 hover:text-green-300 transition-colors"
+                               >
+                                 <ExternalLink className="h-4 w-4" />
+                               </a>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     )}
                   </div>
                 </CardContent>
               </Card>
