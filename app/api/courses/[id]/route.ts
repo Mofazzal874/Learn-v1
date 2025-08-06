@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Verify that the course belongs to the authenticated tutor
-    if (course.tutorId.toString() !== session.user.id) {
+    if ((course as any).tutorId.toString() !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

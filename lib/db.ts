@@ -8,6 +8,7 @@ interface MongooseCache {
 
 // Add mongoose to the globalThis
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
@@ -29,7 +30,7 @@ const cleanURI = MONGODB_URI.startsWith("'") || MONGODB_URI.startsWith('"')
 // Safe log that doesn't expose credentials
 console.log("Using MongoDB connection string");
 
-let cached = global.mongoose || { conn: null, promise: null };
+const cached = global.mongoose || { conn: null, promise: null };
 
 if (!global.mongoose) {
   global.mongoose = cached;
