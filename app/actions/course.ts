@@ -30,6 +30,8 @@ export interface CourseFormData {
   thumbnailAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
   previewVideoAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
   certificate: boolean;
+  prerequisites: string[];
+  outcomes: string[];
 }
 
 export interface SectionData {
@@ -197,6 +199,8 @@ export async function createCourse({
       category: courseData.category,
       level: courseData.level,
       certificate: courseData.certificate,
+      prerequisites: courseData.prerequisites || [],
+      outcomes: courseData.outcomes || [],
       sections: processedSections,
       published: false,
       approved: false

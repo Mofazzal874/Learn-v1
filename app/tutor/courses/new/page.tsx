@@ -20,6 +20,8 @@ interface CourseFormData {
   thumbnailAsset?: string;
   previewVideoAsset?: string;
   certificate: boolean;
+  prerequisites: string[];
+  outcomes: string[];
 }
 
 interface Section {
@@ -61,6 +63,8 @@ export default function CreateCoursePage() {
     thumbnail: null,
     previewVideo: null,
     certificate: false,
+    prerequisites: [],
+    outcomes: [],
   });
   const [curriculumData, setCurriculumData] = useState<Section[]>([]);
   const [pricingData, setPricingData] = useState<PricingData>({
