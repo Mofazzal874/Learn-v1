@@ -184,7 +184,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Save user progress
-    await userProgress.save();
+    try {
+      await userProgress.save();
+      console.log(`[VIDEO_PROGRESS] Successfully saved progress for user ${session.user.id}`);
+    } catch (saveError) {
+      console.error('[VIDEO_PROGRESS_SAVE_ERROR]', saveError);
+      throw new Error(`Failed to save user progress: ${saveError instanceof Error ? saveError.message : 'Unknown save error'}`);
+    }
 
     return NextResponse.json({
       message: 'Video progress tracked successfully',
@@ -198,8 +204,23 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error('[VIDEO_PROGRESS_TRACKING_ERROR]', error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('[VIDEO_PROGRESS_ERROR_DETAILS]', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to track video progress' },
+      { 
+        error: 'Failed to track video progress',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        videoId: videoId || 'unknown',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

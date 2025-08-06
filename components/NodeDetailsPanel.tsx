@@ -24,13 +24,19 @@ interface NodeDetailsPanelProps {
 
 const ensureStringTitle = (title: string | React.ReactNode): string => {
   if (typeof title === 'string') {
-    return title;
+    return cleanTitle(title);
   }
   if (typeof title === 'number') {
     return String(title);
   }
   // For any other type (React elements, objects, etc.), convert to string
-  return String(title || '');
+  return cleanTitle(String(title || ''));
+};
+
+// Function to clean unwanted patterns from title
+const cleanTitle = (title: string): string => {
+  // Remove patterns like "4,h4,h4,h4,h4,h4,h" - number followed by comma and h+ patterns
+  return title.replace(/^\d+,(?:h\d*,?)+\s*/, '').trim();
 };
 
 
@@ -46,6 +52,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   const fixedNode = {...node, title: ensureStringTitle(node.title)};
   const [showSuggestedCourses, setShowSuggestedCourses] = useState(false);
   const [showSuggestedVideos, setShowSuggestedVideos] = useState(false);
+  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
   
   // Suggestions state
   const [suggestedCourses, setSuggestedCourses] = useState<Array<{
@@ -410,22 +417,58 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-white">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={Array.isArray(fixedNode.description) 
-              ? fixedNode.description.join('\n') 
-              : fixedNode.description || ''}
-            onChange={(e) => {
-              const newDescription = e.target.value.split('\n').filter(line => line.trim());
-              onUpdate({
-                ...fixedNode,
-                description: newDescription
-              });
-            }}
-            className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
-          />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="description" className="text-white">Instructions</Label>
+            {Array.isArray(fixedNode.description) && fixedNode.description.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditingInstructions(!isEditingInstructions)}
+                className="text-blue-400 hover:text-blue-300 text-xs h-auto p-1"
+              >
+                {isEditingInstructions ? 'Save' : 'Edit'}
+              </Button>
+            )}
+          </div>
+          
+          {/* Toggle between numbered list view and edit mode */}
+          {Array.isArray(fixedNode.description) && fixedNode.description.length > 0 && !isEditingInstructions ? (
+            /* View Mode: Numbered list */
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-md p-3">
+              <ol className="list-decimal list-inside space-y-2 text-white text-sm">
+                {fixedNode.description.map((instruction, index) => (
+                  <li key={index} className="text-gray-300">
+                    {instruction}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            /* Edit Mode: Textarea */
+            <Textarea
+              id="description"
+              name="description"
+              value={Array.isArray(fixedNode.description) 
+                ? fixedNode.description.join('\n') 
+                : fixedNode.description || ''}
+              onChange={(e) => {
+                const newDescription = e.target.value.split('\n').filter(line => line.trim());
+                onUpdate({
+                  ...fixedNode,
+                  description: newDescription
+                });
+              }}
+              onBlur={() => {
+                // Auto-save when user finishes editing
+                if (Array.isArray(fixedNode.description) && fixedNode.description.length > 0) {
+                  setIsEditingInstructions(false);
+                }
+              }}
+              placeholder="Enter instructions, one per line..."
+              className="min-h-[100px] bg-[#1a1a1a] border-white/10 text-white"
+              autoFocus={isEditingInstructions}
+            />
+          )}
         </div>
 
         <div className="space-y-2">

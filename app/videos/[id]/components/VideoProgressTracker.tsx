@@ -52,7 +52,7 @@ export default function VideoProgressTracker({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.error('Failed to track video progress:', {
             status: response.status,
             statusText: response.statusText,
@@ -64,6 +64,7 @@ export default function VideoProgressTracker({
               outcomes: videoOutcomes
             }
           });
+          // Don't throw error, just log it so it doesn't break the video page
         } else {
           console.log('Video progress tracked successfully');
         }

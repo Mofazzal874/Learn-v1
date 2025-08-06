@@ -109,13 +109,13 @@ function CourseCard({ course }: { course: Course }) {
           <p className="text-xs text-gray-400 mb-3 line-clamp-2">{course.subtitle}</p>
           <div className="flex items-center gap-1 mb-2">
             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            <span className="text-xs text-yellow-400">{course.rating.toFixed(1)}</span>
-            <span className="text-xs text-gray-500">({course.totalReviews})</span>
+            <span className="text-xs text-yellow-400">{(course.rating || 0).toFixed(1)}</span>
+            <span className="text-xs text-gray-500">({course.totalReviews || 0})</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-400 mt-auto">
             <div className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              <span>{course.totalStudents}</span>
+              <span>{course.totalStudents || 0}</span>
             </div>
             <span className="font-semibold text-green-400">
               {course.isFree ? 'Free' : `$${course.price}`}
@@ -166,12 +166,12 @@ function VideoCard({ video }: { video: Video }) {
           <p className="text-xs text-gray-400 mb-3 line-clamp-2">{video.subtitle}</p>
           <div className="flex items-center gap-1 mb-2">
             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            <span className="text-xs text-yellow-400">{video.rating.toFixed(1)}</span>
+            <span className="text-xs text-yellow-400">{(video.rating || 0).toFixed(1)}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-400 mt-auto">
             <div className="flex items-center gap-1">
               <Eye className="w-3 h-3" />
-              <span>{video.views}</span>
+              <span>{video.views || 0}</span>
             </div>
             {video.duration && (
               <div className="flex items-center gap-1">
