@@ -7,7 +7,7 @@ import PricingForm from './components/PricingForm';
 import PreviewForm from './components/PreviewForm';
 import BasicDetailsForm from './components/BasicDetailsForm';
 import { toast } from 'sonner';
-import { createCourse } from '@/app/actions/course';
+import { createCourse, CloudinaryAsset } from '@/app/actions/course';
 
 interface CourseFormData {
   title: string;
@@ -17,8 +17,8 @@ interface CourseFormData {
   level: string;
   thumbnail: File | null;
   previewVideo: File | null;
-  thumbnailAsset?: string;
-  previewVideoAsset?: string;
+  thumbnailAsset?: CloudinaryAsset;
+  previewVideoAsset?: CloudinaryAsset;
   certificate: boolean;
   prerequisites: string[];
   outcomes: string[];
@@ -93,12 +93,24 @@ export default function CreateCoursePage() {
     try {
       setIsSubmitting(true);
       
+      // Show loading toast
+      const loadingToast = toast.loading('Creating your course...', {
+        description: 'Please wait while we set up your course'
+      });
+      
       const courseId = await createCourse({
         courseData: {
-          ...courseData,
-          // Pass only one of: either the CloudinaryAsset or the File object
-          thumbnail: courseData.thumbnailAsset ? null : courseData.thumbnail,
-          previewVideo: courseData.previewVideoAsset ? null : courseData.previewVideo,
+          title: courseData.title,
+          subtitle: courseData.subtitle,
+          description: courseData.description,
+          category: courseData.category,
+          level: courseData.level,
+          certificate: courseData.certificate,
+          prerequisites: courseData.prerequisites,
+          outcomes: courseData.outcomes,
+          // Pass null for File objects since we're using Cloudinary assets
+          thumbnail: null,
+          previewVideo: null,
           // Pass the Cloudinary assets
           thumbnailAsset: courseData.thumbnailAsset,
           previewVideoAsset: courseData.previewVideoAsset,
@@ -110,11 +122,48 @@ export default function CreateCoursePage() {
         pricing: pricingData,
       });
       
-      toast.success('Course created successfully!');
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show success message
+      toast.success('🎉 Course created successfully!', {
+        description: 'Your course has been created and is ready for editing',
+        duration: 4000,
+      });
+      
       router.push(`/tutor/courses/${courseId}`);
     } catch (error: any) {
       console.error('Failed to publish course:', error);
-      toast.error(error.message || 'Failed to create course. Please try again.');
+      
+      // Determine error type and show appropriate message
+      const errorMessage = error.message || 'Failed to create course. Please try again.';
+      
+      if (errorMessage.includes('title already exists')) {
+        toast.error('📝 Duplicate Course Title', {
+          description: 'A course with this title already exists. Please choose a different title.',
+          duration: 6000,
+        });
+      } else if (errorMessage.includes('required fields')) {
+        toast.error('📋 Missing Information', {
+          description: 'Please check that all required fields are filled correctly.',
+          duration: 5000,
+        });
+      } else if (errorMessage.includes('upload') || errorMessage.includes('media')) {
+        toast.error('📁 Upload Failed', {
+          description: 'Failed to upload course media. Please check your files and try again.',
+          duration: 6000,
+        });
+      } else if (errorMessage.includes('internet') || errorMessage.includes('connection')) {
+        toast.error('🌐 Connection Error', {
+          description: 'Unable to connect. Please check your internet connection and try again.',
+          duration: 6000,
+        });
+      } else {
+        toast.error('❌ Course Creation Failed', {
+          description: errorMessage,
+          duration: 6000,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -176,9 +225,9 @@ export default function CreateCoursePage() {
               ...courseData,
               sections: curriculumData,
               pricing: pricingData,
-              // Convert File objects to URLs for preview
-              thumbnail: courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null,
-              previewVideo: courseData.previewVideo ? URL.createObjectURL(courseData.previewVideo) : null,
+              // Pass File objects directly 
+              thumbnail: courseData.thumbnail,
+              previewVideo: courseData.previewVideo,
             }}
             onBack={() => setCurrentStep(2)}
             onPublish={handlePublish}

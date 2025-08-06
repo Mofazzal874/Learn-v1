@@ -143,10 +143,27 @@ export async function createCourse({
       previewVideoResult = await uploadVideo(courseData.previewVideo, 'courses/previews');
     }
 
-    // Generate a slug from the title
-    const slug = courseData.title.toLowerCase()
+    // Generate a unique slug from the title
+    const baseSlug = courseData.title.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+    
+    // Check if slug already exists and make it unique
+    let slug = baseSlug;
+    let slugExists = await Course.findOne({ slug });
+    let counter = 1;
+    
+    while (slugExists) {
+      slug = `${baseSlug}-${counter}`;
+      slugExists = await Course.findOne({ slug });
+      counter++;
+      
+      // Prevent infinite loop
+      if (counter > 100) {
+        slug = `${baseSlug}-${Date.now()}`;
+        break;
+      }
+    }
 
     // Prepare pricing data
     const price = pricing.isFree ? 0 : parseFloat(pricing.basePrice) || 0;
@@ -214,7 +231,42 @@ export async function createCourse({
     return course._id.toString();
   } catch (error) {
     console.error("Course creation error:", error);
-    throw new Error(error instanceof Error ? error.message : "Failed to create course");
+    
+    // Handle specific MongoDB errors
+    if (error instanceof Error) {
+      // Handle duplicate key error (E11000)
+      if (error.message.includes('E11000') && error.message.includes('slug_1')) {
+        throw new Error("A course with this title already exists. Please choose a different title.");
+      }
+      
+      // Handle duplicate key error for other fields
+      if (error.message.includes('E11000')) {
+        throw new Error("This course information conflicts with an existing course. Please modify your details.");
+      }
+      
+      // Handle validation errors
+      if (error.message.includes('validation failed')) {
+        throw new Error("Please check all required fields are filled correctly.");
+      }
+      
+      // Handle network/connection errors
+      if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+        throw new Error("Unable to connect to the database. Please check your internet connection and try again.");
+      }
+      
+      // Handle file upload errors
+      if (error.message.includes('cloudinary') || error.message.includes('upload')) {
+        throw new Error("Failed to upload course media. Please check your files and try again.");
+      }
+      
+      // Return the original error message if it's user-friendly
+      if (error.message.length < 100 && !error.message.includes('MongoError')) {
+        throw new Error(error.message);
+      }
+    }
+    
+    // Generic fallback error
+    throw new Error("Failed to create course. Please try again or contact support if the problem persists.");
   }
 }
 

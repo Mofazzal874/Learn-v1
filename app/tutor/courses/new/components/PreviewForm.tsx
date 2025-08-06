@@ -100,6 +100,47 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
   // Handle course creation with embedding tracking
   const handleCourseSubmit = async () => {
     try {
+      // Validate required fields before submission
+      if (!courseData.title.trim()) {
+        toast.error('📝 Missing Course Title', {
+          description: 'Please provide a title for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (!courseData.description.trim()) {
+        toast.error('📝 Missing Description', {
+          description: 'Please provide a description for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (!courseData.category) {
+        toast.error('📂 Missing Category', {
+          description: 'Please select a category for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (!courseData.thumbnailAsset && !courseData.thumbnail) {
+        toast.error('🖼️ Missing Thumbnail', {
+          description: 'Please upload a thumbnail image for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (courseData.sections.length === 0) {
+        toast.error('📚 No Course Content', {
+          description: 'Please add at least one section with lessons to your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
       // Set embedding processing state
       setEmbeddingStatus("processing");
       
@@ -123,7 +164,7 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
     } catch (error) {
       console.error("Failed to save course:", error);
       setEmbeddingStatus("failed");
-      toast.error("Failed to save course");
+      // Don't show duplicate error toast - let the parent handle it
       throw error; // Re-throw to maintain existing error handling
     }
   };

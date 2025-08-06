@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all enrolled course IDs
-    const enrolledCourseIds = (userProgress.enrolledCourses || []).map((enrollment: any) => enrollment.courseId);
+    const enrolledCourseIds = ((userProgress as any).enrolledCourses || []).map((enrollment: any) => enrollment.courseId);
 
     // Fetch all relevant courses
     const allCourseIds = enrolledCourseIds.filter(Boolean);
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Format enrolled courses with progress data
-    const enrolledCourses = (userProgress.enrolledCourses || []).map((enrollment: any) => {
+    const enrolledCourses = ((userProgress as any).enrolledCourses || []).map((enrollment: any) => {
       const course = courseMap.get(enrollment.courseId.toString());
       if (!course) {
         console.log("Course not found for ID:", enrollment.courseId.toString());
@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
       enrolledCourses,
       inProgressCourses,
       completedCourses,
-      totalCoursesCompleted: userProgress.totalCoursesCompleted || 0,
-      lastActive: userProgress.lastActive || null
+      totalCoursesCompleted: (userProgress as any).totalCoursesCompleted || 0,
+      lastActive: (userProgress as any).lastActive || null
     });
 
   } catch (error) {
