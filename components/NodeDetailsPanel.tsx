@@ -29,7 +29,22 @@ const ensureStringTitle = (title: string | React.ReactNode): string => {
   if (typeof title === 'number') {
     return String(title);
   }
-  // For any other type (React elements, objects, etc.), convert to string
+  if (title && typeof title === 'object') {
+    // Handle React elements in the title
+    if ('props' in title && typeof title.props === 'object' && title.props && 'children' in title.props) {
+      const children = title.props.children;
+      if (Array.isArray(children)) {
+        // If children is an array, try to extract text content from first element
+        return children.map((child: unknown) => 
+          typeof child === 'string' ? cleanTitle(child) : ''
+        ).join('').trim() || cleanTitle(String(title));
+      } else if (typeof children === 'string') {
+        return cleanTitle(children);
+      }
+    }
+    // Fallback to string representation
+    return cleanTitle(String(title));
+  }
   return cleanTitle(String(title || ''));
 };
 
@@ -125,10 +140,29 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    onUpdate({
+    
+    let processedValue: any = value;
+    
+    // Handle different input types with proper processing
+    if (name === 'title') {
+      // Clean the title to remove unwanted patterns
+      processedValue = cleanTitle(value);
+    } else if (name === 'deadline') {
+      // Handle deadline properly - empty string should be undefined
+      processedValue = value && value.trim() ? value : undefined;
+    } else if (name === 'timeNeeded' || name === 'timeConsumed') {
+      processedValue = value ? Number(value) : 0;
+    }
+    
+    console.log(`NodeDetailsPanel: Updating ${name} from "${fixedNode[name as keyof RoadmapNode]}" to "${processedValue}"`);
+    
+    const updatedNode = {
       ...fixedNode,
-      [name]: value,
-    });
+      [name]: processedValue,
+    };
+    
+    console.log("NodeDetailsPanel: Updated node:", updatedNode);
+    onUpdate(updatedNode);
   };
 
   const handleCompletedChange = (checked: boolean) => {
@@ -504,15 +538,14 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
             type="date"
             value={(() => {
               if (!fixedNode.deadline) return "";
-              const deadline = fixedNode.deadline;
               try {
-                if (deadline && typeof deadline === 'object' && 'toISOString' in deadline) {
-                  return (deadline as Date).toISOString().split('T')[0];
-                }
+                // Handle both Date objects and date strings
+                const date = new Date(fixedNode.deadline);
+                if (isNaN(date.getTime())) return "";
+                return date.toISOString().split('T')[0];
               } catch {
-                // Fallback if it's not a valid Date object
+                return "";
               }
-              return String(deadline).split('T')[0];
             })()}
             onChange={handleInputChange}
             className="bg-[#1a1a1a] border-white/10 text-white"

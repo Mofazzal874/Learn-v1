@@ -17,7 +17,11 @@ export default function CreateRoadmap() {
   const [edges, setEdges] = useState<RoadmapEdge[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastFormData, setLastFormData] = useState<any>(null);
+  const [lastFormData, setLastFormData] = useState<{
+    prompt: string;
+    level: "beginner" | "intermediate" | "advanced";
+    roadmapType: "week-by-week" | "topic-wise";
+  } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -145,6 +149,8 @@ export default function CreateRoadmap() {
           name,
           nodes: sanitizedNodes,
           edges: sanitizedEdges,
+          level: lastFormData?.level || "beginner",
+          roadmapType: lastFormData?.roadmapType || "topic-wise",
         }),
       });
 

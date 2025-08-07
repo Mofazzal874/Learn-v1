@@ -50,18 +50,36 @@ interface RoadmapCanvasProps {
 
 // Add this helper function at the top of the file (before the component)
 const ensureStringTitle = (title: string | React.ReactNode): string => {
+  console.log("ensureStringTitle - input:", title, "type:", typeof title);
+  
   if (typeof title === 'string') {
     return title;
   }
+  
   if (title && typeof title === 'object') {
     // Handle React elements in the title
     if ('props' in title && typeof title.props === 'object' && title.props && 'children' in title.props) {
       const children = title.props.children;
+      console.log("ensureStringTitle - children:", children);
+      
       if (Array.isArray(children)) {
-        // If children is an array, try to extract text content
+        // For nested structure like our div with title + time
+        for (const child of children) {
+          if (child && typeof child === 'object' && 'props' in child && child.props && 'children' in child.props) {
+            // This is likely the title div (first child)
+            const nestedChildren = child.props.children;
+            if (typeof nestedChildren === 'string') {
+              console.log("ensureStringTitle - found nested title:", nestedChildren);
+              return nestedChildren;
+            }
+          } else if (typeof child === 'string') {
+            return child;
+          }
+        }
+        // Fallback: join all string children
         return children.map((child: unknown) => 
           typeof child === 'string' ? child : ''
-        ).join('');
+        ).join('').trim();
       } else if (typeof children === 'string') {
         return children;
       }
@@ -95,10 +113,18 @@ const mapRoadmapNodesToReactFlowNodes = (roadmapNodes: RoadmapNode[]): Node[] =>
   });
 };
 
+// Function to clean unwanted patterns from title (same as in NodeDetailsPanel)
+const cleanTitle = (title: string): string => {
+  // Remove patterns like "4,h4,h4,h4,h4,h4,h" or "5,h5,h5,h5,h5,h" 
+  // This matches patterns at the end: number followed by comma and h+number+comma sequences
+  return title.replace(/\d+,(?:h\d*,?)*h?\d*$/, '').trim();
+};
+
 const mapReactFlowNodesToRoadmapNodes = (reactFlowNodes: Node[]): RoadmapNode[] => {
   return reactFlowNodes.map((node, index) => {
-    // Ensure the label is a string
-    const title = ensureStringTitle(node.data.label);
+    // Ensure the label is a string and clean it
+    const rawTitle = ensureStringTitle(node.data.label);
+    const title = cleanTitle(rawTitle);
     
     return {
       id: node.id,
@@ -185,10 +211,12 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     targetPosition: Position.Top,
     data: {
       ...node.data,
+      // Store the original title separately for easy access
+      originalTitle: node.data.label,
       label: (
         <div className="overflow-hidden">
           <div className="font-semibold mb-1 truncate">{node.data.label}</div>
-          <div className="text-xs text-gray-500">{node.data.timeNeeded}h</div>
+          <div className="text-xs text-gray-500">{node.data.timeNeeded || 0}h</div>
         </div>
       ),
     },
@@ -213,11 +241,31 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
 
   // Handle node click
   const onNodeClick = (_: React.MouseEvent, node: Node) => {
-    const roadmapNode = nodes.find((n) => n.id === node.id);
-    if (roadmapNode) {
-      setSelectedNode(roadmapNode);
-      setDetailsPanelCollapsed(false); // Always open panel when clicking a node
-    }
+    console.log("onNodeClick - node.data:", node.data);
+    
+    // Use the stored originalTitle if available, otherwise try to extract from label
+    const rawTitle = node.data.originalTitle || ensureStringTitle(node.data.label);
+    console.log("onNodeClick - rawTitle:", rawTitle);
+    const cleanedTitle = cleanTitle(rawTitle);
+    console.log("onNodeClick - cleanedTitle:", cleanedTitle);
+    
+    const roadmapNode: RoadmapNode = {
+      id: node.id,
+      title: cleanedTitle,
+      description: node.data.description || [],
+      completed: node.data.completed || false,
+      completionTime: node.data.completionTime,
+      deadline: node.data.deadline,
+      timeNeeded: node.data.timeNeeded || 0,
+      timeConsumed: node.data.timeConsumed || 0,
+      children: node.data.children || [],
+      position: node.position,
+      sequence: 0 // Will be set properly when saving
+    };
+    
+    console.log("onNodeClick - final roadmapNode:", roadmapNode);
+    setSelectedNode(roadmapNode);
+    setDetailsPanelCollapsed(false); // Always open panel when clicking a node
   };
 
   // Modify the onNodeDragStopHandler to maintain tree structure
@@ -269,8 +317,8 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     
     console.log("Updating node with title:", updatedNode.title);
     
-    // Ensure the title is a string
-    const title = ensureStringTitle(updatedNode.title);
+    // Ensure the title is a string and clean it
+    const title = typeof updatedNode.title === 'string' ? updatedNode.title : cleanTitle(String(updatedNode.title));
     
     setRfNodes((nds) =>
       nds.map((n) =>
@@ -280,10 +328,12 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
               style: getNodeStyle(updatedNode.completed), // Update styling based on completed status
               data: {
                 ...n.data,
+                // Store the original title for easy access
+                originalTitle: title,
                 label: (
                   <div className="overflow-hidden">
                     <div className="font-semibold mb-1 truncate">{title}</div>
-                    <div className="text-xs text-gray-500">{updatedNode.timeNeeded}h</div>
+                    <div className="text-xs text-gray-500">{updatedNode.timeNeeded || 0}h</div>
                   </div>
                 ),
                 description: updatedNode.description,
@@ -299,7 +349,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
       )
     );
     
-    // Update the title in the updated node before setting it
+    // Update the selected node with clean title to keep details panel in sync
     const fixedUpdatedNode = {
       ...updatedNode,
       title: title

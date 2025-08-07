@@ -106,7 +106,7 @@ export async function POST(req: Request) {
       });
     }
     
-    const { name, nodes, edges } = body;
+    const { name, nodes, edges, level, roadmapType } = body;
 
     // Validate required fields
     if (!name || !nodes || !edges) {
@@ -168,8 +168,8 @@ export async function POST(req: Request) {
     const roadmapData = {
       userId: session.user.id,
       title: name, // Use 'title' to match the schema
-      level: "beginner", // Default level
-      roadmapType: "topic-wise", // Default type
+      level: level || "beginner", // Use provided level or default
+      roadmapType: roadmapType || "topic-wise", // Use provided type or default
       treeDirection: "top-down", // Default direction
       nodes: validatedNodes,
       edges: validatedEdges,
@@ -210,8 +210,8 @@ async function processEmbeddingsAsync(roadmap: Record<string, unknown>, userId: 
     const roadmapData = {
       _id: roadmap._id,
       title: roadmap.title, // Use 'title' since that's what we save now
-      level: roadmap.level || "beginner", // Provide default if not available
-      roadmapType: roadmap.roadmapType || "topic-wise", // Provide default if not available
+      level: roadmap.level, // Should now have the correct value
+      roadmapType: roadmap.roadmapType, // Should now have the correct value
       nodes: roadmap.nodes || [],
       edges: roadmap.edges || [],
       userId: roadmap.userId,
