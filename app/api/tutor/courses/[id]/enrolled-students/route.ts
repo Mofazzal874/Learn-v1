@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import { Course } from '@/models/Course';
 import { UserProgress } from '@/models/UserProgress';
+import { User } from '@/models/User';
 
 export async function GET(
   req: NextRequest,

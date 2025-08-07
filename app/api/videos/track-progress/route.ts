@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import { UserProgress } from '@/models/UserProgress';
 import { Video } from '@/models/Video';
+import { User } from '@/models/User';
 
 export async function POST(req: NextRequest) {
   try {

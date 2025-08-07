@@ -28,15 +28,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: Map, label: 'Saved Roadmaps', href: '/roadmap/saved' },
       ]
     },
-    {
-      title: 'Learning',
-      items: [
-        { icon: BarChart, label: 'Progress', href: '/private/progress' },
-        { icon: Target, label: 'Goals', href: '/private/goals' },
-        { icon: Trophy, label: 'Achievements', href: '/private/achievements' },
-        { icon: Brain, label: 'Skills', href: '/private/skills' },
-      ]
-    },
+    // {
+    //   title: 'Learning',
+    //   items: [
+    //     { icon: BarChart, label: 'Progress', href: '/private/progress' },
+    //     { icon: Target, label: 'Goals', href: '/private/goals' },
+    //     { icon: Trophy, label: 'Achievements', href: '/private/achievements' },
+    //     { icon: Brain, label: 'Skills', href: '/private/skills' },
+    //   ]
+    // },
     {
       title: 'Account',
       items: [
@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
     {
       title: 'Performance',
       items: [
-        { icon: DollarSign, label: 'Earnings', href: '/tutor/earnings' },
+        // { icon: DollarSign, label: 'Earnings', href: '/tutor/earnings' },
         { icon: Sparkles, label: 'Reviews', href: '/tutor/reviews' },
       ]
     },

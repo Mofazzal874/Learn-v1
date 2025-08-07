@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import connectDB from "@/lib/db";
 import { UserProgress } from "@/models/UserProgress";
 import { Course } from "@/models/Course";
+import { User } from "@/models/User";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,11 +15,8 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Find user progress data
-    const userProgress = await UserProgress.findOne({ userId: session.user.id })
-      .populate('enrolledCourses.courseId', 'title category thumbnail tutorId level')
-      .populate('savedCourses', 'title category thumbnail tutorId level')
-      .lean() as any;
+    // Find user progress data without population first
+    const userProgress = await UserProgress.findOne({ userId: session.user.id }).lean() as any;
 
     if (!userProgress) {
       // Return default dashboard data for new users
@@ -59,17 +57,17 @@ export async function GET(req: NextRequest) {
     // Calculate learning time in hours
     const learningTimeHours = Math.round((userProgress.totalLearningTime || 0) / 60);
 
-    // Process enrolled courses for recent progress
+    // Process enrolled courses for recent progress (without population for now)
     const recentCourses = (userProgress.enrolledCourses || [])
       .sort((a: any, b: any) => new Date(b.lastAccessedAt).getTime() - new Date(a.lastAccessedAt).getTime())
       .slice(0, 3)
       .map((enrollment: any) => ({
-        id: enrollment.courseId?._id || enrollment.courseId,
-        title: enrollment.courseId?.title || 'Unknown Course',
-        category: enrollment.courseId?.category || 'General',
+        id: enrollment.courseId,
+        title: 'Course', // Will be populated by frontend if needed
+        category: 'General',
         progress: enrollment.progress || 0,
         lastAccessed: enrollment.lastAccessedAt,
-        thumbnail: enrollment.courseId?.thumbnail,
+        thumbnail: null,
         timeSpent: enrollment.timeSpent || 0,
         status: enrollment.status
       }));

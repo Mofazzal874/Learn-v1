@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import connectDB from "@/lib/db";
 import { Video } from "@/models/Video";
+import { User } from "@/models/User";
 import { uploadImage, uploadVideo, deleteAsset, CloudinaryUploadResult } from "@/lib/cloudinary";
 import { processVideoEmbedding, deleteVideoEmbedding } from "@/lib/video-embedding";
 import mongoose from "mongoose";

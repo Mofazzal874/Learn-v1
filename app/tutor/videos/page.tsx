@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import connectDB from "@/lib/db";
 import { Video as VideoModel } from "@/models/Video";
+import { User } from "@/models/User";
 import { redirect } from "next/navigation";
 import DeleteVideoButton from "./components/DeleteVideoButton";
 
@@ -142,12 +143,12 @@ export default async function TutorVideos() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 bg-[#1a1a1a] border-gray-800">
-                          <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
+                          {/* <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
                             <Link href={`/videos/${video._id}`} className="flex w-full items-center">
                               <Eye className="h-4 w-4 mr-2" />
                               Preview
                             </Link>
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                           <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
                             <Link href={`/tutor/videos/${video._id}/edit`} className="flex w-full items-center">
                               <Edit className="h-4 w-4 mr-2" />
