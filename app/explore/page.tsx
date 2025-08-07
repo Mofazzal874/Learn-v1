@@ -81,7 +81,7 @@ function CourseCard({ course }: { course: Course }) {
       <Card className="bg-[#141414] border-gray-800 shadow-xl overflow-hidden group flex flex-col hover:border-blue-500/40 transition-colors">
         <div className="aspect-video w-full bg-gray-800 relative overflow-hidden">
           {thumbnailUrl ? (
-            <Image
+            <img
               src={thumbnailUrl}
               alt={course.title}
               fill

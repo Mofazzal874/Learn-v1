@@ -94,14 +94,14 @@ async function deleteCourseHandler(
 // Export both DELETE and POST methods to support both form submissions and fetch requests
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return deleteCourseHandler(req, { params });
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return deleteCourseHandler(req, { params });
 }

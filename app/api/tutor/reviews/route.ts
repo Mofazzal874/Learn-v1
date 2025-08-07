@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       .select('title reviews rating totalRatings totalReviews');
 
     
-    let allReviews: any[] = [];
+    const allReviews: any[] = [];
     let totalReviews = 0;
     let totalRatings = 0;
     let totalRatingSum = 0;

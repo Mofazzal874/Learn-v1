@@ -37,7 +37,7 @@ const RoadmapError: React.FC<RoadmapErrorProps> = ({ error, onRetry }) => {
         <p>Tips for better results:</p>
         <ul className="list-disc list-inside mt-2">
           <li>Be specific about what you want to learn</li>
-          <li>Use educational topics (e.g., "Python programming", "Digital marketing")</li>
+          <li>Use educational topics (e.g., &quot;Python programming&quot;, &quot;Digital marketing&quot;)</li>
           <li>Avoid general queries or questions</li>
           <li>Keep the topic focused and clear</li>
         </ul>

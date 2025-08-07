@@ -6,7 +6,7 @@ import { processRoadmapEmbedding } from "@/lib/embedding";
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();

@@ -5,6 +5,7 @@ import { useUser } from "@/context/UserContext";
 import { Camera, Mail, MapPin, Pencil, Phone, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import Image from "next/image";
 
 export default function ProfilePage() {
   const { user, setUser } = useUser();

@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 // Add POST method to support form submissions
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Reuse the same logic as PATCH
   return PATCH(req, { params });
@@ -15,7 +15,7 @@ export async function POST(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     
     // Build search query
-    let searchQuery: Record<string, unknown> = {
+    const searchQuery: Record<string, unknown> = {
       published: true
     };
     

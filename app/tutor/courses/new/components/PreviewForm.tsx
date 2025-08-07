@@ -205,7 +205,7 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
               poster={getThumbnailUrl()}
             />
           ) : getThumbnailUrl() ? (
-            <Image
+            <img
               src={getThumbnailUrl()!}
               alt={courseData.title}
               className="w-full h-64 object-cover"

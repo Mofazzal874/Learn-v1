@@ -149,7 +149,7 @@ export default async function TutorCourseDetails({ params }: { params: Promise<{
                     poster={course.thumbnail}
                   />
                 ) : course.thumbnail ? (
-                  <Image
+                  <img
                     src={course.thumbnail} 
                     alt={course.title} 
                     className="w-full h-full object-cover"

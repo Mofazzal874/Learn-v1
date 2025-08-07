@@ -13,6 +13,7 @@ import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
 import { redirect } from "next/navigation";
 import DeleteCourseButton from "./components/DeleteCourseButton";
+import Image from "next/image";
 
 // Function to get courses from the database
 async function getTutorCourses(userId: string) {
@@ -70,6 +71,7 @@ export default async function TutorCourses() {
                             <img
                               src={course.thumbnail}
                               alt={course.title}
+                              
                               className="w-full h-full object-cover"
                             />
                           ) : (

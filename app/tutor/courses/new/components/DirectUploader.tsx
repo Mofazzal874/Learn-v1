@@ -119,7 +119,7 @@ export default function DirectUploader({
       {fileName ? (
         <div className="flex items-center gap-2 mb-4">
           {resourceType === 'image' ? (
-            <Image className="h-6 w-6 text-blue-400" />
+            <img className="h-6 w-6 text-blue-400"  />
           ) : (
             <Video className="h-6 w-6 text-blue-400" />
           )}
@@ -136,7 +136,7 @@ export default function DirectUploader({
       ) : resourceType === 'video' ? (
         <Video className="h-12 w-12 text-gray-400 mb-4" />
       ) : (
-        <Image className="h-12 w-12 text-gray-400 mb-4" />
+        <img className="h-12 w-12 text-gray-400 mb-4" />
       )}
       
       <div className="flex flex-col items-center">

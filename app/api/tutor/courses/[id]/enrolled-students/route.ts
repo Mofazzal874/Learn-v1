@@ -6,7 +6,7 @@ import { UserProgress } from '@/models/UserProgress';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();

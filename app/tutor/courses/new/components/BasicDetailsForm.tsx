@@ -17,6 +17,7 @@ import {
 import { Upload, BookOpen, ArrowRight, Loader2 } from "lucide-react";
 import DirectUploader from './DirectUploader';
 import { getCategoryOptions } from '@/lib/categories';
+import Image from 'next/image';
 
 interface CloudinaryAsset {
   secure_url: string;

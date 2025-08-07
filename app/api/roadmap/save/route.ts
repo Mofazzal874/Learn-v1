@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     const validatedNodes = [];
     const invalidNodes = [];
     
-    for (let node of nodes) {
+    for (const node of nodes) {
       if (validateNode(node)) {
         validatedNodes.push(node);
       } else {
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     const validatedEdges = [];
     const invalidEdges = [];
     
-    for (let edge of edges) {
+    for (const edge of edges) {
       if (validateEdge(edge)) {
         validatedEdges.push(edge);
       } else {

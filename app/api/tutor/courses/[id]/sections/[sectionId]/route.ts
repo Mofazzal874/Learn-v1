@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 // GET - Fetch a specific section
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; sectionId: string }> | { id: string; sectionId: string } }
+  { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -56,7 +56,7 @@ export async function GET(
 // PUT - Update a specific section
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; sectionId: string }> | { id: string; sectionId: string } }
+  { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -140,7 +140,7 @@ export async function PUT(
 // DELETE - Delete a specific section
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; sectionId: string }> | { id: string; sectionId: string } }
+  { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
   try {
     const session = await auth();

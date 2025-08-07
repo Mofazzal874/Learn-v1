@@ -82,7 +82,7 @@ export default async function UserVideos() {
                       <div className="flex gap-4">
                         <div className="w-32 h-20 bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden relative">
                           {video.thumbnail ? (
-                            <Image
+                            <img
                               src={video.thumbnail}
                               alt={video.title}
                               fill
