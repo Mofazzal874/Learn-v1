@@ -17,7 +17,7 @@ export async function PUT(
     await connectDB();
 
     const { nodes, edges } = await req.json();
-    const { id } = params;
+    const { id } = await params;
 
     const roadmap = await Roadmap.findOneAndUpdate(
       { _id: id, userId: session.user.id },

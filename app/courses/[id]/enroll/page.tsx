@@ -35,19 +35,15 @@ async function getCourse(id: string) {
   }
 }
 
-interface EnrollPageProps {
-  params: Promise<{ id: string }> | { id: string };
-}
-
-export default async function CourseEnrollmentPage({ params }: EnrollPageProps) {
+export default async function CourseEnrollmentPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const resolvedParams = await params;
+  const { id } = await params;
   
   if (!session) {
     redirect("/login");
   }
 
-  const course = await getCourse(resolvedParams.id);
+  const course = await getCourse(id);
 
   if (!course) {
     return (
@@ -75,7 +71,7 @@ export default async function CourseEnrollmentPage({ params }: EnrollPageProps) 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <div className="mb-6">
-          <Link href={`/courses/${resolvedParams.id}`}>
+          <Link href={`/courses/${id}`}>
             <Button variant="outline" className="border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Course

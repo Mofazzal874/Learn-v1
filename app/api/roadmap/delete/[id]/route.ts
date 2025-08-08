@@ -15,7 +15,7 @@ export async function DELETE(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     
     const roadmap = await Roadmap.findOneAndDelete({
       _id: id,

@@ -14,7 +14,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { rating, review } = await req.json();
 
     if (!rating || rating < 1 || rating > 5) {
@@ -134,7 +134,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const url = new URL(req.url);
     const limit = parseInt(url.searchParams.get('limit') || '10');
 

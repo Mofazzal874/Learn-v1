@@ -11,7 +11,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Use the video action to unpublish the video
     const { unpublishVideo } = await import('@/app/actions/video');

@@ -67,7 +67,7 @@ export async function POST(
       sumRatings,
       averageRating,
       finalRating: course.rating,
-      allRatings: course.ratings.map(r => ({ userId: r.userId, rating: r.rating }))
+      allRatings: course.ratings.map((r: any) => ({ userId: r.userId, rating: r.rating }))
     });
 
     await course.save();

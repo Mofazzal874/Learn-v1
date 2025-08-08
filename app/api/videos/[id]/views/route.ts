@@ -5,7 +5,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Use the video action to increment views
     const { incrementVideoViews } = await import('@/app/actions/video');

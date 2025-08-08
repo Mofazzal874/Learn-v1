@@ -13,7 +13,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { rating } = await req.json();
 
     if (!rating || rating < 1 || rating > 5) {
@@ -60,7 +60,7 @@ export async function POST(
       sumRatings,
       averageRating,
       finalRating: video.rating,
-      allRatings: video.ratings.map(r => ({ userId: r.userId, rating: r.rating }))
+      allRatings: video.ratings.map((r: any) => ({ userId: r.userId, rating: r.rating }))
     });
 
     await video.save();
@@ -87,7 +87,7 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    const { id } = params;
+    const { id } = await params;
 
     await connectDB();
 

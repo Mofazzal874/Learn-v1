@@ -38,14 +38,10 @@ async function getVideo(id: string) {
   }
 }
 
-interface VideoPageProps {
-  params: Promise<{ id: string }> | { id: string };
-}
-
-export default async function VideoDetailsPage({ params }: VideoPageProps) {
+export default async function VideoDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const resolvedParams = await params;
-  const video = await getVideo(resolvedParams.id);
+  const { id } = await params;
+  const video = await getVideo(id);
 
   if (!video) {
     return (
@@ -80,7 +76,7 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Video Progress Tracker */}
       <VideoProgressTracker
-        videoId={resolvedParams.id}
+        videoId={id}
         videoTitle={video.title}
         videoDuration={video.duration || ''}
         videoOutcomes={video.outcomes || []}
@@ -168,7 +164,7 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
               {/* Action Buttons */}
               <div className="flex items-center gap-4 mb-6">
                 <VideoRating 
-                  videoId={resolvedParams.id}
+                  videoId={id}
                   isLoggedIn={!!session}
                 />
                 <CopyLinkButton />
@@ -279,7 +275,7 @@ export default async function VideoDetailsPage({ params }: VideoPageProps) {
 
           {/* Comments Section */}
           <CommentsSection
-            videoId={resolvedParams.id}
+            videoId={id}
             initialComments={sortedComments}
             totalComments={video.totalComments || 0}
             isLoggedIn={!!session}

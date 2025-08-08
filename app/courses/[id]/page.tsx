@@ -59,16 +59,12 @@ async function checkEnrollment(userId: string, courseId: string) {
   }
 }
 
-interface CoursePageProps {
-  params: Promise<{ id: string }> | { id: string };
-}
-
-export default async function CourseDetailsPage({ params }: CoursePageProps) {
+export default async function CourseDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const resolvedParams = await params;
-  const rawCourse = await getCourse(resolvedParams.id);
+  const { id } = await params;
+  const rawCourse = await getCourse(id);
   const course = rawCourse ? parseCourseData(rawCourse) : null;
-  const isEnrolled = session?.user?.id ? await checkEnrollment(session.user.id, resolvedParams.id) : false;
+  const isEnrolled = session?.user?.id ? await checkEnrollment(session.user.id, id) : false;
 
   if (!course) {
     return (
@@ -179,7 +175,7 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                   <span className="text-gray-300">{totalLessons} lessons</span>
                 </div>
                 <CourseRating 
-                  courseId={resolvedParams.id}
+                  courseId={id}
                   isLoggedIn={!!session}
                 />
               </div>
@@ -325,7 +321,7 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
 
             {/* Reviews Section */}
             <CourseReviews
-              courseId={resolvedParams.id}
+              courseId={id}
               initialReviews={course.reviews ? course.reviews.slice(0, 10) : []}
               totalReviews={course.totalReviews || 0}
               isLoggedIn={!!session}
@@ -372,14 +368,14 @@ export default async function CourseDetailsPage({ params }: CoursePageProps) {
                       <div className="w-full bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg p-3 text-center">
                         ✓ You&apos;re enrolled in this course
                       </div>
-                      <Link href={`/courses/${resolvedParams.id}/learn`}>
+                      <Link href={`/courses/${id}/learn`}>
                         <Button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
                           Continue Learning
                         </Button>
                       </Link>
                     </div>
                   ) : session ? (
-                    <Link href={`/courses/${resolvedParams.id}/enroll`}>
+                    <Link href={`/courses/${id}/enroll`}>
                       <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                         Enroll Now
                       </Button>
