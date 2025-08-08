@@ -49,6 +49,9 @@ async function connectDB() {
       socketTimeoutMS: 30000,
     };
 
+    // Configure mongoose to be less strict with population
+    mongoose.set('strictPopulate', false);
+
     console.log("Establishing new MongoDB connection...");
     cached.promise = mongoose.connect(cleanURI, opts).then((mongoose) => {
       console.log("MongoDB connected successfully");

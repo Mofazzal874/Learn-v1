@@ -29,7 +29,11 @@ export async function GET(
 
     // Find the course with tutor details
     const course = await Course.findById(courseId)
-      .populate('tutorId', 'firstName lastName image')
+      .populate({
+        path: 'tutorId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
       .lean() as any;
 
     if (!course) {

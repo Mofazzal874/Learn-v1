@@ -30,7 +30,11 @@ export async function GET(req: NextRequest) {
     
     // Get courses sorted by rating and total students
     const courses = await Course.find(searchQuery)
-      .populate('tutorId', 'firstName lastName image')
+      .populate({
+        path: 'tutorId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
       .sort({ rating: -1, totalStudents: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)

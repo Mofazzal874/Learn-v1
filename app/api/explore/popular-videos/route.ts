@@ -30,7 +30,11 @@ export async function GET(req: NextRequest) {
     
     // Get videos sorted by rating and views
     const videos = await Video.find(searchQuery)
-      .populate('userId', 'firstName lastName image')
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
       .sort({ rating: -1, views: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)

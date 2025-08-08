@@ -78,7 +78,11 @@ export async function GET(req: NextRequest) {
 
     // Get videos with pagination
     const videos = await Video.find(query)
-      .populate('userId', 'firstName lastName image')
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

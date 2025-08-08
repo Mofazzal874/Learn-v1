@@ -15,8 +15,16 @@ export async function GET(
     await connectDB();
 
     const video = await Video.findById(id)
-      .populate('userId', 'firstName lastName image')
-      .populate('comments.userId', 'firstName lastName image')
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
+      .populate({
+        path: 'comments.userId',
+        select: 'firstName lastName image',
+        model: 'User'
+      })
       .lean();
 
     if (!video) {
