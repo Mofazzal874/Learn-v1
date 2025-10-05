@@ -243,7 +243,7 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                   </div>
                   <div className="flex items-center text-gray-400">
                     <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                    <span>Access on mobile and TV</span>
+                    <span>Access on mobile</span>
                   </div>
                   {courseData.certificate && (
                     <div className="flex items-center text-gray-400">
@@ -252,22 +252,6 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                     </div>
                   )}
                 </div>
-
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
-                  onClick={onPublish}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update Course'
-                  )}
-                </Button>
-                
                 {courseId && (
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"

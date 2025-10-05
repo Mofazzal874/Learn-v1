@@ -109,20 +109,7 @@ export default async function TutorCourseDetails({ params }: { params: { id: str
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Link href={`/tutor/courses/${params.id}/content`}>
-              <Button variant="outline" className="border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800">
-                <Layout className="h-4 w-4 mr-2" />
-                Course Content
-              </Button>
-            </Link>
-            <Link href={`/tutor/courses/${params.id}/edit`}>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Course
-              </Button>
-            </Link>
-          </div>
+          
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
