@@ -370,25 +370,6 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                     </div>
                   )}
                 </div>
-<<<<<<< HEAD
-                {courseId && (
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={handlePublish}
-                    disabled={isPublishing}
-                  >
-                    {isPublishing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Publishing...
-                      </>
-                    ) : (
-                      'Publish Course'
-                    )}
-                  </Button>
-                )}
-=======
->>>>>>> f2381a83791a615a58a7a70bc215d6493c3f5ee4
               </div>
             </Card>
           </div>
