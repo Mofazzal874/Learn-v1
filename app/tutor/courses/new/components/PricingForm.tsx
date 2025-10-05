@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,25 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const isFormValid = useMemo(() => {
+   
+    if (formData.isFree) {
+      return true;
+    }
+
+    
+    const basePriceValid = parseFloat(formData.basePrice) > 0;
+
+    if (formData.hasDiscount) {
+      const discountPriceValid = parseFloat(formData.discountPrice) > 0;
+      const discountEndsValid = formData.discountEnds.trim().length > 0;
+      return basePriceValid && discountPriceValid && discountEndsValid;
+    }
+
+    return basePriceValid;
+  }, [formData]);
+
 
   const handleInputChange = (field: keyof PricingData, value: any) => {
     setFormData(prev => {
@@ -100,6 +119,7 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
                   className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
                 />
               </div>
+              <p className="text-gray-400 text-sm mt-1 ml-1">Please select a base price greater than $0</p>
             </div>
           )}
 
@@ -134,6 +154,7 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
                         className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
                       />
                     </div>
+                    <p className="text-gray-400 text-sm mt-1 ml-1">Please select a discount price greater than $0</p>
                   </div>
 
                   <div>
@@ -147,6 +168,7 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
                         onChange={(e) => handleInputChange('discountEnds', e.target.value)}
                         className="pl-10 bg-[#0a0a0a] border-gray-800 text-white"
                       />
+                      <p className="text-gray-400 text-sm mt-1 ml-1">Please select a discount end date</p>
                     </div>
                   </div>
                 </div>
@@ -201,8 +223,8 @@ export default function PricingForm({ onSave, onBack, onNext, initialData }: Pri
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isLoading || !isFormValid}
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
             >
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />

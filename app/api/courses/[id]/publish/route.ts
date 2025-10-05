@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 // Add POST method to support form submissions
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Reuse the same logic as PATCH
   return PATCH(req, { params });
@@ -15,7 +15,7 @@ export async function POST(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -26,7 +26,9 @@ export async function PATCH(
 
     await connectDB();
 
-    const courseId = params.id;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const courseId = resolvedParams.id;
     
     // Validate ID format
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
@@ -62,6 +64,7 @@ export async function PATCH(
 
     // Update course status
     course.published = true;
+    course.approved = true; // Auto-approve when publishing for now
     await course.save();
 
     // Return success JSON response instead of redirecting

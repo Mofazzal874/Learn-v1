@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -16,8 +16,9 @@ export async function PATCH(
 
     await connectDB();
 
-    // Access id as a property of params object without destructuring
-    const id = params.id;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -46,7 +47,7 @@ export async function PATCH(
     // Update the course to be published
     const updatedCourse = await Course.findByIdAndUpdate(
       id,
-      { published: true },
+      { published: true, approved: true },
       { new: true }
     );
 

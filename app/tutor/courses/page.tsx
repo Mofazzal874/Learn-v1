@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { Card } from "@/components/ui/card";
-import { BookOpen, MoreVertical, Users, Star, Eye, Edit, Trash2, PlusCircle } from "lucide-react";
+import { BookOpen, MoreVertical, Users, Star, Eye, Edit, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import connectDB from "@/lib/db";
 import { Course } from "@/models/Course";
+import { User } from "@/models/User";
 import { redirect } from "next/navigation";
+import DeleteCourseButton from "./components/DeleteCourseButton";
+import Image from "next/image";
 
 // Function to get courses from the database
 async function getTutorCourses(userId: string) {
@@ -58,7 +61,8 @@ export default async function TutorCourses() {
                 </Link>
               </div>
             ) : (
-              courses.map((course) => (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              courses.map((course: any) => (
                 <Card key={course._id} className="bg-[#141414] border-gray-800">
                   <div className="p-6">
                     <div className="flex items-start justify-between">
@@ -68,6 +72,7 @@ export default async function TutorCourses() {
                             <img
                               src={course.thumbnail}
                               alt={course.title}
+                              
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -108,26 +113,24 @@ export default async function TutorCourses() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 bg-[#1a1a1a] border-gray-800">
-                          <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
+                          {/* <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
                             <Link href={`/courses/${course.slug || course._id}`} className="flex w-full items-center">
                               <Eye className="h-4 w-4 mr-2" />
                               Preview
                             </Link>
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                           <DropdownMenuItem className="text-gray-400 hover:text-white focus:text-white focus:bg-gray-800">
                             <Link href={`/tutor/courses/${course._id}/edit`} className="flex w-full items-center">
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Course
                             </Link>
                           </DropdownMenuItem>
-                          <form action={`/api/courses/${course._id}/delete`}>
-                            <DropdownMenuItem className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-900/20">
-                              <button type="submit" className="flex w-full items-center">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </button>
-                            </DropdownMenuItem>
-                          </form>
+
+                          <DeleteCourseButton 
+                            courseId={course._id} 
+                            courseName={course.title}
+                            variant="dropdown"
+                          />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -146,6 +149,15 @@ export default async function TutorCourses() {
                         <div className="text-sm text-gray-400">Total Reviews</div>
                         <div className="text-lg font-semibold text-purple-400">{course.totalReviews || 0}</div>
                       </div>
+                      <Link href={`/tutor/courses/${course._id}/enrolled-students`}>
+                        <div className="bg-[#1a1a1a] hover:bg-[#2a2a2a] transition-colors rounded-lg px-4 py-2 cursor-pointer">
+                          <div className="text-sm text-gray-400">See Enrolled Students</div>
+                          <div className="text-lg font-semibold text-orange-400 flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {course.totalStudents || 0}
+                          </div>
+                        </div>
+                      </Link>
                     </div>
                   </div>
                 </Card>

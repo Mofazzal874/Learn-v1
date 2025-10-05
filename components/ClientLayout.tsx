@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { usePathname } from 'next/navigation';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -20,6 +22,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Mobile Menu Button */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <Sheet>

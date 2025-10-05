@@ -8,6 +8,7 @@ interface MongooseCache {
 
 // Add mongoose to the globalThis
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
@@ -29,7 +30,7 @@ const cleanURI = MONGODB_URI.startsWith("'") || MONGODB_URI.startsWith('"')
 // Safe log that doesn't expose credentials
 console.log("Using MongoDB connection string");
 
-let cached = global.mongoose || { conn: null, promise: null };
+const cached = global.mongoose || { conn: null, promise: null };
 
 if (!global.mongoose) {
   global.mongoose = cached;
@@ -47,6 +48,9 @@ async function connectDB() {
       connectTimeoutMS: 30000,
       socketTimeoutMS: 30000,
     };
+
+    // Configure mongoose to be less strict with population
+    mongoose.set('strictPopulate', false);
 
     console.log("Establishing new MongoDB connection...");
     cached.promise = mongoose.connect(cleanURI, opts).then((mongoose) => {

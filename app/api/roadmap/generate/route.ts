@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { generateRoadmap } from "@/lib/ai";
 import { getSession } from "@/lib/getSession";
 import { RoadmapNode, RoadmapEdge } from "@/types";
+import connectDB from "@/lib/db";
+import { UserProgress } from "@/models/UserProgress";
 
 export async function POST(req: Request) {
   const startTime = Date.now();
@@ -63,8 +65,25 @@ export async function POST(req: Request) {
     }
 
     console.log("Starting AI generation...");
-    // Generate nodes using AI
-    const nodes = await generateRoadmap(prompt, level, roadmapType);
+
+    // Fetch user skills from UserProgress
+    let userSkills: string[] = [];
+    try {
+      await connectDB();
+      const userProgress = await UserProgress.findOne({ userId: session.user.id });
+      if (userProgress && userProgress.skills && userProgress.skills.length > 0) {
+        userSkills = userProgress.skills.map((skill: any) => skill.name);
+        console.log("User skills found:", userSkills);
+      } else {
+        console.log("No user skills found");
+      }
+    } catch (error) {
+      console.error("Error fetching user skills:", error);
+      // Continue without skills if there's an error
+    }
+
+    // Generate nodes using AI (with user skills)
+    const nodes = await generateRoadmap(prompt, level, roadmapType, userSkills);
 
     if (!nodes || nodes.length === 0) {
       console.error("Empty nodes array returned from generateRoadmap");

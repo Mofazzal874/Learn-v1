@@ -6,6 +6,7 @@ import { Course } from "@/models/Course";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { uploadImage, uploadVideo, CloudinaryUploadResult } from "@/lib/cloudinary";
+import { processCourseEmbedding } from "@/lib/course-embedding";
 
 export interface CloudinaryAsset {
   secure_url: string;
@@ -29,6 +30,8 @@ export interface CourseFormData {
   thumbnailAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
   previewVideoAsset?: CloudinaryAsset; // Add support for direct Cloudinary uploads
   certificate: boolean;
+  prerequisites: string[];
+  outcomes: string[];
 }
 
 export interface SectionData {
@@ -71,7 +74,12 @@ export async function createCourse({
   const session = await auth();
   
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized - Please sign in');
+  }
+
+  // Check if user has tutor role
+  if (session.user.role !== 'tutor') {
+    throw new Error('Unauthorized - Tutor access required');
   }
 
   await connectDB();
@@ -135,10 +143,27 @@ export async function createCourse({
       previewVideoResult = await uploadVideo(courseData.previewVideo, 'courses/previews');
     }
 
-    // Generate a slug from the title
-    const slug = courseData.title.toLowerCase()
+    // Generate a unique slug from the title
+    const baseSlug = courseData.title.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+    
+    // Check if slug already exists and make it unique
+    let slug = baseSlug;
+    let slugExists = await Course.findOne({ slug });
+    let counter = 1;
+    
+    while (slugExists) {
+      slug = `${baseSlug}-${counter}`;
+      slugExists = await Course.findOne({ slug });
+      counter++;
+      
+      // Prevent infinite loop
+      if (counter > 100) {
+        slug = `${baseSlug}-${Date.now()}`;
+        break;
+      }
+    }
 
     // Prepare pricing data
     const price = pricing.isFree ? 0 : parseFloat(pricing.basePrice) || 0;
@@ -173,6 +198,7 @@ export async function createCourse({
     });
 
     // Create the course using Mongoose
+    console.log(`[CREATE_COURSE_ACTION] Creating course "${courseData.title}" for user ${session.user.id}`);
     const course = await Course.create({
       title: courseData.title,
       subtitle: courseData.subtitle || '',
@@ -190,15 +216,57 @@ export async function createCourse({
       category: courseData.category,
       level: courseData.level,
       certificate: courseData.certificate,
+      prerequisites: courseData.prerequisites || [],
+      outcomes: courseData.outcomes || [],
       sections: processedSections,
       published: false,
       approved: false
     });
 
+    console.log(`[CREATE_COURSE_ACTION] Course created successfully with ID: ${course._id}`);
+
+    // Process embeddings asynchronously - don't wait for completion
+    processCourseEmbeddingsAsync(course, session.user.id);
+
     return course._id.toString();
   } catch (error) {
     console.error("Course creation error:", error);
-    throw new Error(error instanceof Error ? error.message : "Failed to create course");
+    
+    // Handle specific MongoDB errors
+    if (error instanceof Error) {
+      // Handle duplicate key error (E11000)
+      if (error.message.includes('E11000') && error.message.includes('slug_1')) {
+        throw new Error("A course with this title already exists. Please choose a different title.");
+      }
+      
+      // Handle duplicate key error for other fields
+      if (error.message.includes('E11000')) {
+        throw new Error("This course information conflicts with an existing course. Please modify your details.");
+      }
+      
+      // Handle validation errors
+      if (error.message.includes('validation failed')) {
+        throw new Error("Please check all required fields are filled correctly.");
+      }
+      
+      // Handle network/connection errors
+      if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+        throw new Error("Unable to connect to the database. Please check your internet connection and try again.");
+      }
+      
+      // Handle file upload errors
+      if (error.message.includes('cloudinary') || error.message.includes('upload')) {
+        throw new Error("Failed to upload course media. Please check your files and try again.");
+      }
+      
+      // Return the original error message if it's user-friendly
+      if (error.message.length < 100 && !error.message.includes('MongoError')) {
+        throw new Error(error.message);
+      }
+    }
+    
+    // Generic fallback error
+    throw new Error("Failed to create course. Please try again or contact support if the problem persists.");
   }
 }
 
@@ -617,4 +685,35 @@ async function fileToBase64(file: any): Promise<string | null> {
       resolve(null); // Resolve with null instead of rejecting to avoid crashes
     }
   });
+}
+
+// Async function to process course embeddings without blocking the response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processCourseEmbeddingsAsync(course: any, userId: string) {
+  try {
+    console.log(`[CREATE_COURSE_ACTION] Starting async embedding processing for course ${course._id}`);
+    
+    // Convert the mongoose document to a plain object for processing
+    const courseData = {
+      _id: course._id,
+      title: course.title,
+      subtitle: course.subtitle,
+      description: course.description,
+      category: course.category,
+      level: course.level,
+      sections: course.sections || [],
+      outcomes: course.outcomes || [],
+      prerequisites: course.prerequisites || [],
+      tags: course.tags || [],
+      tutorId: course.tutorId,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt
+    };
+    
+    await processCourseEmbedding(courseData, userId);
+    console.log(`[CREATE_COURSE_ACTION] Embedding processing completed for course ${course._id}`);
+  } catch (error) {
+    console.error(`[CREATE_COURSE_ACTION] Embedding processing failed for course ${course._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main course creation operation
+  }
 }

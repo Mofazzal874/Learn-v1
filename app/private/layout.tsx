@@ -1,6 +1,8 @@
-import { getSession } from "@/lib/getSession";
 import { redirect } from "next/navigation";
-import { ClientLayout } from "@/components/ClientLayout";
+import connectDB from "@/lib/db";
+import { getSession } from "@/lib/getSession";
+import { User } from "@/models/User";
+import UserContextProvider from "@/components/UserContextProvider";
 
 export default async function PrivateLayout({
   children,
@@ -8,8 +10,17 @@ export default async function PrivateLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const user = session?.user;
+  const userID = session?.user?.id;
+  if (!userID) return redirect("/");
+
+  await connectDB();
+  const userDoc = await User.findById(userID).lean();
+  const user = JSON.parse(JSON.stringify(userDoc));
   if (!user) return redirect("/");
 
-  return <ClientLayout>{children}</ClientLayout>;
-} 
+  return (
+    <UserContextProvider initialuser={user}>
+      {children}
+    </UserContextProvider>
+  );
+}

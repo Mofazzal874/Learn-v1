@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Upload, BookOpen, ArrowRight, Loader2 } from "lucide-react";
 import DirectUploader from './DirectUploader';
+import { getCategoryOptions } from '@/lib/categories';
+import Image from 'next/image';
 
 interface CloudinaryAsset {
   secure_url: string;
@@ -39,6 +41,8 @@ interface CourseFormData {
   previewVideoAsset?: CloudinaryAsset;
   thumbnailAsset?: CloudinaryAsset;
   certificate: boolean;
+  prerequisites: string[];
+  outcomes: string[];
 }
 
 interface BasicDetailsFormProps {
@@ -56,11 +60,69 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
     thumbnail: null,
     previewVideo: null,
     certificate: false,
+    prerequisites: [''],
+    outcomes: [''],
   });
 
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(initialData?.thumbnailAsset?.secure_url || null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const isFormValid = useMemo(() => {
+    const hasTitle = formData.title.trim().length > 0;
+    const hasSubtitle = formData.subtitle.trim().length > 0;
+    const hasDescription = formData.description.trim().length > 0;
+    const hasCategory = formData.category.length > 0;
+    const hasLevel = formData.level.length > 0;
+    const hasThumbnail = formData.thumbnail !== null || formData.thumbnailAsset !== undefined;
+    const hasPreviewVideo = formData.previewVideo !== null || formData.previewVideoAsset !== undefined;
+    const hasPrerequisites = (formData.prerequisites || []).some(p => p.trim().length > 0);
+    const hasOutcomes = (formData.outcomes || []).some(o => o.trim().length > 0);
+
+
+    return hasTitle && hasSubtitle && hasDescription && hasCategory && hasLevel && hasThumbnail && hasPreviewVideo && hasPrerequisites && hasOutcomes;
+  }, [formData]);
+
+  const addPrerequisite = () => {
+    setFormData(prev => ({
+      ...prev,
+      prerequisites: [...(prev.prerequisites || []), '']
+    }));
+  };
+
+  const removePrerequisite = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      prerequisites: (prev.prerequisites || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updatePrerequisite = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      prerequisites: (prev.prerequisites || []).map((item, i) => i === index ? value : item)
+    }));
+  };
+
+  const addOutcome = () => {
+    setFormData(prev => ({
+      ...prev,
+      outcomes: [...(prev.outcomes || []), '']
+    }));
+  };
+
+  const removeOutcome = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      outcomes: (prev.outcomes || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateOutcome = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      outcomes: (prev.outcomes || []).map((item, i) => i === index ? value : item)
+    }));
+  };
   const handleInputChange = (field: keyof CourseFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -68,16 +130,6 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
     }));
   };
 
-  const handleFileChange = (field: 'thumbnail' | 'previewVideo', file: File | null) => {
-    if (file && field === 'thumbnail') {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    handleInputChange(field, file);
-  };
 
   const handleThumbnailUploadSuccess = (result: CloudinaryAsset) => {
     setFormData(prev => ({
@@ -157,11 +209,12 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
                   <SelectTrigger className="mt-2 bg-[#0a0a0a] border-gray-800 text-white">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-gray-800">
-                    <SelectItem value="programming" className="text-white">Programming</SelectItem>
-                    <SelectItem value="design" className="text-white">Design</SelectItem>
-                    <SelectItem value="business" className="text-white">Business</SelectItem>
-                    <SelectItem value="marketing" className="text-white">Marketing</SelectItem>
+                  <SelectContent className="bg-[#1a1a1a] border-gray-800 max-h-60">
+                    {getCategoryOptions().map((category) => (
+                      <SelectItem key={category.value} value={category.value} className="text-white">
+                        {category.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -182,6 +235,81 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
             </div>
           </div>
 
+          {/* Prerequisites */}
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold text-white">Prerequisites</h3>
+          <p className="text-gray-400">What students should know before taking this course</p>
+          
+          <div className="space-y-3">
+            {(formData.prerequisites || []).map((prerequisite, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={prerequisite}
+                  onChange={(e) => updatePrerequisite(index, e.target.value)}
+                  placeholder="e.g., Basic knowledge of HTML and CSS"
+                  className="flex-1 bg-[#0a0a0a] border-gray-800 text-white"
+                />
+                {(formData.prerequisites || []).length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removePrerequisite(index)}
+                    className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addPrerequisite}
+              className="border-gray-600 text-gray-400 hover:border-gray-500"
+            >
+              + Add Prerequisite
+            </Button>
+          </div>
+        </div>
+
+        {/* Learning Outcomes */}
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold text-white">Learning Outcomes</h3>
+          <p className="text-gray-400">What students will learn from this course</p>
+          
+          <div className="space-y-3">
+            {(formData.outcomes || []).map((outcome, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={outcome}
+                  onChange={(e) => updateOutcome(index, e.target.value)}
+                  placeholder="e.g., Build responsive websites using modern CSS"
+                  className="flex-1 bg-[#0a0a0a] border-gray-800 text-white"
+                />
+                {(formData.outcomes || []).length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeOutcome(index)}
+                    className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addOutcome}
+              className="border-gray-600 text-gray-400 hover:border-gray-500"
+            >
+              + Add Learning Outcome
+            </Button>
+          </div>
+        </div>
           {/* Media Upload */}
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Course Media</h3>
@@ -227,12 +355,36 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
               {/* Preview Video Upload */}
               <div className="border-2 border-dashed border-gray-800 rounded-lg p-8">
                 <div className="flex flex-col items-center">
+                {formData.previewVideoAsset?.secure_url ? (
+                  <div className="relative w-full max-w-md mb-4">
+                    <video
+                      src={formData.previewVideoAsset.secure_url}
+                      controls
+                      className="w-full rounded-lg"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 border-0 text-white"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          previewVideo: null,
+                          previewVideoAsset: undefined
+                        }));
+                      }}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                ) : (
                   <DirectUploader
                     resourceType="video"
                     buttonText="Upload Preview Video"
                     maxFileSize={50}
                     onUploadSuccess={handleVideoUploadSuccess}
                   />
+                )}
                 </div>
               </div>
             </div>
@@ -260,10 +412,10 @@ export default function BasicDetailsForm({ initialData, onSave }: BasicDetailsFo
         </div>
 
         <div className="flex justify-end mt-8">
-          <Button
+        <Button
             onClick={handleSubmit}
-            disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={isLoading || !isFormValid}
+            className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>

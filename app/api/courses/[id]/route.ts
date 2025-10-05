@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -17,7 +17,9 @@ export async function GET(
 
     await connectDB();
 
-    const courseId = params.id;
+    // Safely handle params whether it's a Promise or not
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const courseId = resolvedParams.id;
     
     // Validate ID format
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
@@ -32,7 +34,7 @@ export async function GET(
     }
 
     // Verify that the course belongs to the authenticated tutor
-    if (course.tutorId.toString() !== session.user.id) {
+    if ((course as any).tutorId.toString() !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

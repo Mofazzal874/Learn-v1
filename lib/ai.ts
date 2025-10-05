@@ -17,8 +17,7 @@ const invalidKeywords = [
   "how to fix",
   "debug",
   "error",
-  "problem"
-];
+].filter(keyword => keyword && keyword.trim().length > 0); // Remove any empty strings
 
 // Simplify the validation function
 const validatePrompt = (prompt: string): boolean => {
@@ -46,9 +45,10 @@ const validatePrompt = (prompt: string): boolean => {
 export const generateRoadmap = async (
   prompt: string,
   level: "beginner" | "intermediate" | "advanced",
-  roadmapType: "week-by-week" | "topic-wise"
+  roadmapType: "week-by-week" | "topic-wise",
+  userSkills: string[] = []
 ) => {
-  console.log("Starting AI generation with:", { prompt, level, roadmapType });
+  console.log("Starting AI generation with:", { prompt, level, roadmapType, userSkills });
 
   try {
     // Validate prompt before making API request
@@ -83,6 +83,20 @@ REQUIREMENTS:
 - Maximum 2 child nodes per parent (binary tree structure)
 - For time allocation: beginner (1-4h), intermediate (2-6h), advanced (4-10h)
 
+${userSkills.length > 0 ? `
+USER'S EXISTING SKILLS:
+The user already has experience with: ${userSkills.join(", ")}
+
+IMPORTANT INSTRUCTIONS FOR EXISTING SKILLS:
+- For skills directly relevant to ${prompt} (like "${userSkills.filter(skill => 
+  skill.toLowerCase().includes(prompt.toLowerCase().split(' ')[0]) || 
+  prompt.toLowerCase().includes(skill.toLowerCase().split(' ')[0])
+).join('", "')}"): Reference these as prerequisites the user already knows, mention them briefly for review but don't create dedicated learning nodes
+- For supporting skills (like cloud, DevOps, etc.): These can be mentioned as complementary or for advanced applications
+- Focus the roadmap on NEW concepts and skills the user needs to learn for ${prompt}
+- You can suggest how their existing skills connect to or support the new learning
+` : ''}
+
 TREE STRUCTURE REQUIREMENTS:
 - Start with a single root node (node_1)
 - Each node must have 0-2 children only
@@ -103,7 +117,7 @@ Only the raw JSON is allowed in your response.`;
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "mistral-saba-24b",
+        model: "qwen/qwen3-32b",
         messages: [
           {
             role: "system",
@@ -263,7 +277,7 @@ Only the raw JSON is allowed in your response.`;
       // Create fallback nodes for testing/debug
       if (process.env.NODE_ENV === 'development') {
         console.log("Creating fallback nodes for development environment");
-        const fallbackNodes = createFallbackNodes(prompt, level);
+        const fallbackNodes = createFallbackNodes(prompt, level, userSkills);
         return fallbackNodes;
       }
       
@@ -280,7 +294,7 @@ Only the raw JSON is allowed in your response.`;
 };
 
 // Function to create fallback nodes for development/testing
-function createFallbackNodes(prompt: string, level: string): RoadmapNode[] {
+function createFallbackNodes(prompt: string, level: string, userSkills: string[] = []): RoadmapNode[] {
   const nodeCount = level === "beginner" ? 8 : level === "intermediate" ? 12 : 15;
   const nodes: RoadmapNode[] = [];
   

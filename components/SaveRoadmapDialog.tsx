@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Database, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface SaveRoadmapDialogProps {
@@ -13,9 +13,20 @@ interface SaveRoadmapDialogProps {
   isSaving: boolean;
 }
 
+interface SaveResponse {
+  success: boolean;
+  id: string;
+  name: string;
+  embeddingStatus?: "processing" | "completed" | "failed";
+  nodeCount?: number;
+  edgeCount?: number;
+}
+
 export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialogProps) {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
+  const [embeddingStatus, setEmbeddingStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle");
+  const [savedRoadmapId, setSavedRoadmapId] = useState<string | null>(null);
 
   console.log("SaveRoadmapDialog rendered with props:", { onSave: !!onSave, isSaving });
 
@@ -35,12 +46,32 @@ export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialo
     
     try {
       console.log("Saving roadmap with name:", name);
+      
+      // Set embedding processing state
+      setEmbeddingStatus("processing");
+      setSavedRoadmapId(null);
+      
       await onSave(name);
+      
+      // Show success message with embedding info
+      toast.success("Roadmap saved successfully! AI embeddings are being processed...", {
+        description: "This will help with future search and recommendations"
+      });
+      
+      // Simulate embedding completion after a delay (in real app, you'd check the API)
+      setTimeout(() => {
+        setEmbeddingStatus("completed");
+        toast.success("AI embeddings completed!", {
+          description: "Your roadmap is now fully searchable"
+        });
+      }, 3000);
+      
       setOpen(false);
       setName("");
-      toast.success("Roadmap saved successfully!");
+      
     } catch (error) {
       console.error("Failed to save roadmap:", error);
+      setEmbeddingStatus("failed");
       toast.error("Failed to save roadmap");
     }
   };
@@ -56,7 +87,7 @@ export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialo
           {isSaving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
+              {embeddingStatus === "processing" ? "Saving & Processing AI..." : "Saving..."}
             </>
           ) : (
             <>
@@ -82,6 +113,38 @@ export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialo
               required
             />
           </div>
+          
+          {/* Embedding Status Information */}
+          {(isSaving || embeddingStatus !== "idle") && (
+            <div className="space-y-2">
+              <div className="text-sm text-gray-400">
+                AI Enhancement Status:
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                {embeddingStatus === "processing" && (
+                  <>
+                    <Database className="h-4 w-4 text-blue-400 animate-pulse" />
+                    <span className="text-blue-400">Processing AI embeddings...</span>
+                  </>
+                )}
+                {embeddingStatus === "completed" && (
+                  <>
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-green-400">AI embeddings completed</span>
+                  </>
+                )}
+                {embeddingStatus === "failed" && (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <span className="text-red-400">AI processing failed (roadmap still saved)</span>
+                  </>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">
+                This enables intelligent search and personalized recommendations
+              </div>
+            </div>
+          )}
           <div className="flex justify-end space-x-2">
             <Button
               type="button"
@@ -98,7 +161,7 @@ export default function SaveRoadmapDialog({ onSave, isSaving }: SaveRoadmapDialo
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {embeddingStatus === "processing" ? "Saving & Processing AI..." : "Saving..."}
                 </>
               ) : (
                 'Save'

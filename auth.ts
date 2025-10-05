@@ -1,23 +1,15 @@
-import NextAuth, { CredentialsSignin } from "next-auth";
+import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Github from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
+import { authConfig } from "./auth.config";
 import connectDB from "./lib/db";
 import { User } from "./models/User";
 import { compare } from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   providers: [
-    Github({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }),
-
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-
+    ...authConfig.providers,
+    
     Credentials({
       name: "Credentials",
 
@@ -89,10 +81,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // On initial sign in, user object is available
       if (user) {
         token.role = user.role as string;
       }
+      
+      // For OAuth providers, we need to fetch user from database to get correct info
+      if (account && (account.provider === "google" || account.provider === "github")) {
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: user.email });
+          if (dbUser) {
+            token.sub = dbUser._id.toString();
+            token.role = dbUser.role;
+            token.email = dbUser.email;
+          }
+        } catch (error) {
+          console.error('Error fetching user in JWT callback:', error);
+        }
+      }
+      
+      // For subsequent requests without user object, keep existing token data
       return token;
     },
 
@@ -104,6 +114,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
+            // Get the intended role from cookies or default to 'user'
+            const { cookies } = await import('next/headers');
+            const cookieStore = await cookies();
+            const selectedRole = cookieStore.get('selected-role')?.value || 'user';
+            
             const [firstName = "", lastName = ""] = (name || "").split(" ");
             await User.create({ 
               email, 
@@ -112,11 +127,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name, 
               image, 
               authProviderId: id,
-              role: "user"
+              role: selectedRole === 'tutor' ? 'tutor' : 'user'
             });
           }
           return true;
         } catch (error) {
+          console.error("Error while creating Google user:", error);
           throw new Error("Error while creating user");
         }
       }
@@ -128,6 +144,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const alreadyUser = await User.findOne({ email });
     
           if (!alreadyUser) {
+            // Get the intended role from cookies or default to 'user'
+            const { cookies } = await import('next/headers');
+            const cookieStore = await cookies();
+            const selectedRole = cookieStore.get('selected-role')?.value || 'user';
+            
             const [firstName = "", lastName = ""] = (name || "").split(" ");
             await User.create({ 
               email, 
@@ -136,11 +157,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name, 
               image, 
               authProviderId: id,
-              role: "user"
+              role: selectedRole === 'tutor' ? 'tutor' : 'user'
             });
           }
           return true;
         } catch (error) {
+          console.error("Error while creating GitHub user:", error);
           throw new Error("Error while creating user");
         }
       }

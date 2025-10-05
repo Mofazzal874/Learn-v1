@@ -4,11 +4,9 @@
 import React, { useState, useCallback, useEffect } from "react";
 import ReactFlow, {
   addEdge,
-  MiniMap,
   Controls,
   Background,
   Connection,
-  Edge as ReactFlowEdge,
   useNodesState,
   useEdgesState,
   OnConnect,
@@ -17,7 +15,6 @@ import ReactFlow, {
   Panel,
   Position,
   MarkerType,
-  EdgeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { RoadmapNode, RoadmapEdge } from "../types";
@@ -48,23 +45,41 @@ interface RoadmapCanvasProps {
   onSave?: (name: string) => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
+  roadmapId?: string; // Optional roadmap ID for suggestions functionality
 }
 
 // Add this helper function at the top of the file (before the component)
-const ensureStringTitle = (title: any): string => {
+const ensureStringTitle = (title: string | React.ReactNode): string => {
+  console.log("ensureStringTitle - input:", title, "type:", typeof title);
+  
   if (typeof title === 'string') {
     return title;
   }
+  
   if (title && typeof title === 'object') {
     // Handle React elements in the title
-    if (title.props && title.props.children) {
+    if ('props' in title && typeof title.props === 'object' && title.props && 'children' in title.props) {
       const children = title.props.children;
+      console.log("ensureStringTitle - children:", children);
+      
       if (Array.isArray(children)) {
-        // If children is an array, try to extract text content
-        return children.map(child => 
-          typeof child === 'string' ? child : 
-          (child && child.props && child.props.children) || ''
-        ).join('');
+        // For nested structure like our div with title + time
+        for (const child of children) {
+          if (child && typeof child === 'object' && 'props' in child && child.props && 'children' in child.props) {
+            // This is likely the title div (first child)
+            const nestedChildren = child.props.children;
+            if (typeof nestedChildren === 'string') {
+              console.log("ensureStringTitle - found nested title:", nestedChildren);
+              return nestedChildren;
+            }
+          } else if (typeof child === 'string') {
+            return child;
+          }
+        }
+        // Fallback: join all string children
+        return children.map((child: unknown) => 
+          typeof child === 'string' ? child : ''
+        ).join('').trim();
       } else if (typeof children === 'string') {
         return children;
       }
@@ -98,10 +113,18 @@ const mapRoadmapNodesToReactFlowNodes = (roadmapNodes: RoadmapNode[]): Node[] =>
   });
 };
 
+// Function to clean unwanted patterns from title (same as in NodeDetailsPanel)
+const cleanTitle = (title: string): string => {
+  // Remove patterns like "4,h4,h4,h4,h4,h4,h" or "5,h5,h5,h5,h5,h" 
+  // This matches patterns at the end: number followed by comma and h+number+comma sequences
+  return title.replace(/\d+,(?:h\d*,?)*h?\d*$/, '').trim();
+};
+
 const mapReactFlowNodesToRoadmapNodes = (reactFlowNodes: Node[]): RoadmapNode[] => {
   return reactFlowNodes.map((node, index) => {
-    // Ensure the label is a string
-    const title = ensureStringTitle(node.data.label);
+    // Ensure the label is a string and clean it
+    const rawTitle = ensureStringTitle(node.data.label);
+    const title = cleanTitle(rawTitle);
     
     return {
       id: node.id,
@@ -141,16 +164,16 @@ const mapReactFlowEdgesToRoadmapEdges = (reactFlowEdges: Edge[]): RoadmapEdge[] 
   }));
 };
 
-const nodeStyle = {
+const getNodeStyle = (completed: boolean = false) => ({
   padding: '8px',
   borderRadius: '8px',
-  border: '2px solid #e2e8f0',
-  background: 'white',
+  border: `2px solid ${completed ? '#22c55e' : '#e2e8f0'}`,
+  background: completed ? '#dcfce7' : 'white',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   width: 140,
   fontSize: '11px',
   textAlign: 'center' as const,
-};
+});
 
 const edgeStyle = {
   stroke: '#94a3b8',
@@ -175,6 +198,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   onSave,
   isSaving = false,
   readOnly = false,
+  roadmapId,
 }) => {
   // Determine which set of props to use
   const nodes = propNodes || propInitialNodes || [];
@@ -182,15 +206,17 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
 
   const initialRfNodes = mapRoadmapNodesToReactFlowNodes(nodes).map(node => ({
     ...node,
-    style: nodeStyle,
+    style: getNodeStyle(node.data.completed),
     sourcePosition: Position.Bottom,
     targetPosition: Position.Top,
     data: {
       ...node.data,
+      // Store the original title separately for easy access
+      originalTitle: node.data.label,
       label: (
         <div className="overflow-hidden">
           <div className="font-semibold mb-1 truncate">{node.data.label}</div>
-          <div className="text-xs text-gray-500">{node.data.timeNeeded}h</div>
+          <div className="text-xs text-gray-500">{node.data.timeNeeded || 0}h</div>
         </div>
       ),
     },
@@ -214,17 +240,37 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   );
 
   // Handle node click
-  const onNodeClick = (_: React.MouseEvent, node: Node<any, any>) => {
-    const roadmapNode = nodes.find((n) => n.id === node.id);
-    if (roadmapNode) {
-      setSelectedNode(roadmapNode);
-      setDetailsPanelCollapsed(false); // Always open panel when clicking a node
-    }
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+    console.log("onNodeClick - node.data:", node.data);
+    
+    // Use the stored originalTitle if available, otherwise try to extract from label
+    const rawTitle = node.data.originalTitle || ensureStringTitle(node.data.label);
+    console.log("onNodeClick - rawTitle:", rawTitle);
+    const cleanedTitle = cleanTitle(rawTitle);
+    console.log("onNodeClick - cleanedTitle:", cleanedTitle);
+    
+    const roadmapNode: RoadmapNode = {
+      id: node.id,
+      title: cleanedTitle,
+      description: node.data.description || [],
+      completed: node.data.completed || false,
+      completionTime: node.data.completionTime,
+      deadline: node.data.deadline,
+      timeNeeded: node.data.timeNeeded || 0,
+      timeConsumed: node.data.timeConsumed || 0,
+      children: node.data.children || [],
+      position: node.position,
+      sequence: 0 // Will be set properly when saving
+    };
+    
+    console.log("onNodeClick - final roadmapNode:", roadmapNode);
+    setSelectedNode(roadmapNode);
+    setDetailsPanelCollapsed(false); // Always open panel when clicking a node
   };
 
   // Modify the onNodeDragStopHandler to maintain tree structure
   const onNodeDragStopHandler = useCallback(
-    (event: React.MouseEvent, node: Node<any, any>) => {
+    (event: React.MouseEvent, node: Node) => {
       if (readOnly) return;
       const updatedNodes = rfNodes.map((n) =>
         n.id === node.id ? { ...n, position: node.position } : n
@@ -271,17 +317,25 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     
     console.log("Updating node with title:", updatedNode.title);
     
-    // Ensure the title is a string
-    const title = ensureStringTitle(updatedNode.title);
+    // Ensure the title is a string and clean it
+    const title = typeof updatedNode.title === 'string' ? updatedNode.title : cleanTitle(String(updatedNode.title));
     
     setRfNodes((nds) =>
       nds.map((n) =>
         n.id === updatedNode.id
           ? {
               ...n,
+              style: getNodeStyle(updatedNode.completed), // Update styling based on completed status
               data: {
                 ...n.data,
-                label: title,
+                // Store the original title for easy access
+                originalTitle: title,
+                label: (
+                  <div className="overflow-hidden">
+                    <div className="font-semibold mb-1 truncate">{title}</div>
+                    <div className="text-xs text-gray-500">{updatedNode.timeNeeded || 0}h</div>
+                  </div>
+                ),
                 description: updatedNode.description,
                 completed: updatedNode.completed,
                 completionTime: updatedNode.completionTime,
@@ -295,7 +349,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
       )
     );
     
-    // Update the title in the updated node before setting it
+    // Update the selected node with clean title to keep details panel in sync
     const fixedUpdatedNode = {
       ...updatedNode,
       title: title
@@ -383,6 +437,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
                 }}
                 onUpdate={handleNodeUpdate}
                 isMobile={isMobile}
+                roadmapId={roadmapId}
               />
             </div>
           </div>
@@ -402,6 +457,7 @@ const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
                 onClose={() => setSelectedNode(null)}
                 onUpdate={handleNodeUpdate}
                 isMobile={isMobile}
+                roadmapId={roadmapId}
               />
             </div>
           </SheetContent>

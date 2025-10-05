@@ -222,6 +222,7 @@ export default function SavedRoadmapPage() {
             onUpdateNodes={handleNodeChange}
             onUpdateEdges={handleEdgeChange}
             readOnly={false}
+            roadmapId={roadmapId}
           />
         )}
       </div>

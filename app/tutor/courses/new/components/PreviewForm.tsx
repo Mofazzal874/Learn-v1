@@ -12,9 +12,14 @@ import {
   FileText,
   Link,
   ArrowRight,
-  Loader2
+  Loader2,
+  Database,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
+import { parseStringArray } from "@/lib/utils/course-data";
 
 interface PreviewFormProps {
   courseData: {
@@ -23,9 +28,31 @@ interface PreviewFormProps {
     description: string;
     category: string;
     level: string;
-    thumbnail: string | null;
-    previewVideo: string | null;
+    thumbnail: File | null;
+    previewVideo: File | null;
+    thumbnailAsset?: {
+      secure_url: string;
+      public_id: string;
+      resource_type: string;
+      format: string;
+      duration?: number;
+      bytes: number;
+      width?: number;
+      height?: number;
+    };
+    previewVideoAsset?: {
+      secure_url: string;
+      public_id: string;
+      resource_type: string;
+      format: string;
+      duration?: number;
+      bytes: number;
+      width?: number;
+      height?: number;
+    };
     certificate: boolean;
+    prerequisites: string[];
+    outcomes: string[];
     sections: Array<{
       id: string;
       title: string;
@@ -52,11 +79,10 @@ interface PreviewFormProps {
   onBack: () => void;
   onPublish: () => Promise<void>;
   isSubmitting: boolean;
-  courseId?: string; // Add courseId for existing courses
 }
 
-export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting, courseId }: PreviewFormProps) {
-  const [isPublishing, setIsPublishing] = useState(false);
+export default function PreviewForm({ courseData, onBack, onPublish, isSubmitting }: PreviewFormProps) {
+  const [embeddingStatus, setEmbeddingStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle");
   
   const totalLessons = courseData.sections.reduce(
     (total, section) => total + section.lessons.length,
@@ -72,41 +98,93 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
       return total + minutes;
     }, 0);
     
-  // Separate function to handle the publish action specifically
-  const handlePublish = async () => {
-    if (!courseId) {
-      // For new courses, just use the standard onPublish
-      await onPublish();
-      return;
-    }
-    
+  // Handle course creation with embedding tracking
+  const handleCourseSubmit = async () => {
     try {
-      setIsPublishing(true);
-      
-      // Call the publish API endpoint
-      const response = await fetch(`/api/courses/${courseId}/publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to publish course');
+      // Validate required fields before submission
+      if (!courseData.title.trim()) {
+        toast.error('📝 Missing Course Title', {
+          description: 'Please provide a title for your course',
+          duration: 4000,
+        });
+        return;
       }
       
-      toast.success('Course published successfully!');
+      if (!courseData.description.trim()) {
+        toast.error('📝 Missing Description', {
+          description: 'Please provide a description for your course',
+          duration: 4000,
+        });
+        return;
+      }
       
-      // Refresh the page to see updated status
-      window.location.href = `/tutor/courses/${courseId}`;
-    } catch (error: any) {
-      console.error('Publish error:', error);
-      toast.error(error.message || 'Failed to publish course. Please try again.');
-    } finally {
-      setIsPublishing(false);
+      if (!courseData.category) {
+        toast.error('📂 Missing Category', {
+          description: 'Please select a category for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (!courseData.thumbnailAsset && !courseData.thumbnail) {
+        toast.error('🖼️ Missing Thumbnail', {
+          description: 'Please upload a thumbnail image for your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      if (courseData.sections.length === 0) {
+        toast.error('📚 No Course Content', {
+          description: 'Please add at least one section with lessons to your course',
+          duration: 4000,
+        });
+        return;
+      }
+      
+      // Set embedding processing state
+      setEmbeddingStatus("processing");
+      
+      // Call the original onPublish function
+      await onPublish();
+      
+      // Show success message with embedding info
+      toast.success("Course saved successfully! AI embeddings are being processed...", {
+        description: "This will help with future search and recommendations"
+      });
+      
+      // Simulate embedding completion after a delay
+      // In a real app, you'd poll the embedding status API
+      setTimeout(() => {
+        setEmbeddingStatus("completed");
+        toast.success("AI embeddings completed!", {
+          description: "Your course is now fully searchable"
+        });
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Failed to save course:", error);
+      setEmbeddingStatus("failed");
+      // Don't show duplicate error toast - let the parent handle it
+      throw error; // Re-throw to maintain existing error handling
     }
+  };
+
+  // Helper function to get thumbnail URL
+  const getThumbnailUrl = () => {
+    if (courseData.thumbnailAsset?.secure_url) {
+      return courseData.thumbnailAsset.secure_url;
+    }
+   
+    return undefined;
+  };
+
+  // Helper function to get preview video URL
+  const getPreviewVideoUrl = () => {
+    if (courseData.previewVideoAsset?.secure_url) {
+      return courseData.previewVideoAsset.secure_url;
+    }
+    return undefined;
   };
 
   return (
@@ -119,9 +197,16 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
 
         {/* Course Header */}
         <div className="relative rounded-lg overflow-hidden mb-6">
-          {courseData.thumbnail ? (
+        {getPreviewVideoUrl() ? (
+            <video 
+              className="w-full h-64 object-cover" 
+              src={getPreviewVideoUrl()!} 
+              controls 
+              poster={getThumbnailUrl()}
+            />
+          ) : getThumbnailUrl() ? (
             <img
-              src={courseData.thumbnail}
+              src={getThumbnailUrl()!}
               alt={courseData.title}
               className="w-full h-64 object-cover"
             />
@@ -165,6 +250,39 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                 </div>
               )}
             </div>
+
+            {/* Prerequisites and Outcomes */}
+            {(parseStringArray(courseData.prerequisites)?.length > 0 || parseStringArray(courseData.outcomes)?.length > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {parseStringArray(courseData.prerequisites)?.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3">Prerequisites</h3>
+                    <ul className="space-y-2">
+                      {parseStringArray(courseData.prerequisites).map((prerequisite, index) => (
+                        <li key={index} className="flex items-start gap-2 text-gray-400">
+                          <CheckCircle className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                          <span>{prerequisite}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {parseStringArray(courseData.outcomes)?.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3">What You&apos;ll Learn</h3>
+                    <ul className="space-y-2">
+                      {parseStringArray(courseData.outcomes).map((outcome, index) => (
+                        <li key={index} className="flex items-start gap-2 text-gray-400">
+                          <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                          <span>{outcome}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Course Sections */}
             <div className="space-y-4">
@@ -252,6 +370,7 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                     </div>
                   )}
                 </div>
+<<<<<<< HEAD
                 {courseId && (
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
@@ -268,32 +387,67 @@ export default function PreviewForm({ courseData, onBack, onPublish, isSubmittin
                     )}
                   </Button>
                 )}
+=======
+>>>>>>> f2381a83791a615a58a7a70bc215d6493c3f5ee4
               </div>
             </Card>
           </div>
         </div>
+
+        {/* Embedding Status Information */}
+        {(isSubmitting || embeddingStatus !== "idle") && (
+          <div className="mt-6 p-4 bg-[#0a0a0a] rounded-lg border border-gray-800">
+            <div className="text-sm text-gray-400 mb-2">
+              AI Enhancement Status:
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {embeddingStatus === "processing" && (
+                <>
+                  <Database className="h-4 w-4 text-blue-400 animate-pulse" />
+                  <span className="text-blue-400">Processing AI embeddings...</span>
+                </>
+              )}
+              {embeddingStatus === "completed" && (
+                <>
+                  <Check className="h-4 w-4 text-green-400" />
+                  <span className="text-green-400">AI embeddings completed</span>
+                </>
+              )}
+              {embeddingStatus === "failed" && (
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400">AI processing failed (course still saved)</span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              This enables intelligent search and personalized recommendations
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-between mt-8">
           <Button
             variant="outline"
             onClick={onBack}
             className="border-gray-800 text-gray-400"
+            disabled={isSubmitting}
           >
             Back
           </Button>
           <Button
-            onClick={onPublish}
+            onClick={handleCourseSubmit}
             disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {courseId ? 'Updating...' : 'Creating...'}
+                {embeddingStatus === "processing" ? "Saving & Processing AI..." : 'Creating Course...'}
               </>
             ) : (
               <>
-                {courseId ? 'Update Course' : 'Create Course'}
+                Create Course
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}

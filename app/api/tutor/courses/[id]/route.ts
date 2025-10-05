@@ -3,11 +3,12 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import { Course } from '@/models/Course';
 import { uploadImage, uploadVideo, deleteAsset } from '@/lib/cloudinary';
+import { processCourseEmbedding, deleteCourseEmbedding } from '@/lib/course-embedding';
 import mongoose from 'mongoose';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -49,7 +50,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -79,9 +80,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get update data
-    const data = await req.json();
-    const { courseData, sections, pricing } = data;
+    // Replace lines 82-84 with:
+const formData = await req.formData();
+
+// Extract basic course data
+const courseData = {
+  title: formData.get('title') as string,
+  subtitle: formData.get('subtitle') as string,
+  description: formData.get('description') as string,
+  category: formData.get('category') as string,
+  level: formData.get('level') as string,
+  certificate: formData.get('certificate') === 'true',
+  thumbnail: formData.get('thumbnail') as string,
+  previewVideo: formData.get('previewVideo') as string,
+  prerequisites: (formData.get('prerequisites') as string || '').split(',').filter(item => item.trim()),
+  outcomes: (formData.get('outcomes') as string || '').split(',').filter(item => item.trim()),
+};
+
+// Extract sections and pricing data
+const sections = JSON.parse(formData.get('sections') as string || '[]');
+const pricing = JSON.parse(formData.get('pricing') as string || '{}');
 
     // Handle media uploads if new files are provided
     let thumbnailResult = course.thumbnailAsset;
@@ -113,11 +131,13 @@ export async function PUT(
     const discountEnds = pricing.hasDiscount ? new Date(pricing.discountEnds) : undefined;
 
     // Process sections and lessons
-    const processedSections = sections.map((section, index) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processedSections = sections.map((section: any, index: number) => ({
       title: section.title,
       description: section.description,
       order: index,
-      lessons: section.lessons.map(lesson => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lessons: section.lessons.map((lesson: any) => ({
         title: lesson.title,
         description: lesson.description,
         duration: lesson.duration,
@@ -129,6 +149,7 @@ export async function PUT(
     }));
 
     // Update the course
+    console.log(`[UPDATE_COURSE] Updating course "${courseData.title}" with ID ${id}`);
     const updatedCourse = await Course.findByIdAndUpdate(
       id,
       {
@@ -146,14 +167,22 @@ export async function PUT(
         discountedPrice,
         discountEnds,
         certificate: courseData.certificate,
+        prerequisites: JSON.parse(formData.get('prerequisites') as string || '[]'),
+        outcomes: JSON.parse(formData.get('outcomes') as string || '[]'),
         sections: processedSections,
       },
       { new: true }
     );
 
+    console.log(`[UPDATE_COURSE] Course updated successfully with ID: ${id}`);
+
+    // Process embeddings asynchronously - don't wait for completion
+    processCourseEmbeddingsAsync(updatedCourse, session.user.id);
+
     return NextResponse.json({
       message: 'Course updated successfully',
-      course: updatedCourse
+      course: updatedCourse,
+      embeddingStatus: "processing"
     });
   } catch (error) {
     console.error('Update course error:', error);
@@ -166,7 +195,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -206,8 +235,13 @@ export async function DELETE(
     }
 
     // Delete the course
+    console.log(`[DELETE_COURSE] Deleting course with ID: ${id}`);
     await Course.findByIdAndDelete(id);
 
+    // Clean up embeddings asynchronously
+    deleteCourseEmbeddingsAsync(id, session.user.id);
+
+    console.log(`[DELETE_COURSE] Course deleted successfully with ID: ${id}`);
     return NextResponse.json({ 
       message: 'Course deleted successfully' 
     });
@@ -217,5 +251,48 @@ export async function DELETE(
       { error: 'Failed to delete course' },
       { status: 500 }
     );
+  }
+}
+
+// Async function to process course embeddings without blocking the response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processCourseEmbeddingsAsync(course: any, userId: string) {
+  try {
+    console.log(`[UPDATE_COURSE] Starting async embedding processing for course ${course._id}`);
+    
+    // Convert the mongoose document to a plain object for processing
+    const courseData = {
+      _id: course._id,
+      title: course.title,
+      subtitle: course.subtitle,
+      description: course.description,
+      category: course.category,
+      level: course.level,
+      sections: course.sections || [],
+      outcomes: course.outcomes || [],
+      prerequisites: course.prerequisites || [],
+      tags: course.tags || [],
+      tutorId: course.tutorId,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt
+    };
+    
+    await processCourseEmbedding(courseData, userId);
+    console.log(`[UPDATE_COURSE] Embedding processing completed for course ${course._id}`);
+  } catch (error) {
+    console.error(`[UPDATE_COURSE] Embedding processing failed for course ${course._id}:`, error);
+    // Don't throw - this is async and shouldn't affect the main course update operation
+  }
+}
+
+// Async function to clean up embeddings when course is deleted
+async function deleteCourseEmbeddingsAsync(courseId: string, userId: string) {
+  try {
+    console.log(`[DELETE_COURSE] Starting async embedding cleanup for course ${courseId}`);
+    await deleteCourseEmbedding(courseId, userId);
+    console.log(`[DELETE_COURSE] Embedding cleanup completed for course ${courseId}`);
+  } catch (error) {
+    console.error(`[DELETE_COURSE] Embedding cleanup failed for course ${courseId}:`, error);
+    // Don't throw - this is async and shouldn't affect the main course deletion operation
   }
 }

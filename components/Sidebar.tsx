@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target, Map, LineChart, Sparkles, DollarSign, LogOut } from 'lucide-react';
+import { Home, BookOpen, PlusCircle, Settings, User, BarChart, Compass, Trophy, Brain, Target, Map, LineChart, Sparkles, DollarSign, LogOut, Video, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,15 +28,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
         { icon: Map, label: 'Saved Roadmaps', href: '/roadmap/saved' },
       ]
     },
-    {
-      title: 'Learning',
-      items: [
-        { icon: BarChart, label: 'Progress', href: '/private/progress' },
-        { icon: Target, label: 'Goals', href: '/private/goals' },
-        { icon: Trophy, label: 'Achievements', href: '/private/achievements' },
-        { icon: Brain, label: 'Skills', href: '/private/skills' },
-      ]
-    },
+    // {
+    //   title: 'Learning',
+    //   items: [
+    //     { icon: BarChart, label: 'Progress', href: '/private/progress' },
+    //     { icon: Target, label: 'Goals', href: '/private/goals' },
+    //     { icon: Trophy, label: 'Achievements', href: '/private/achievements' },
+    //     { icon: Brain, label: 'Skills', href: '/private/skills' },
+    //   ]
+    // },
     {
       title: 'Account',
       items: [
@@ -51,15 +51,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '', compact = fals
       title: 'Main',
       items: [
         { icon: Home, label: 'Dashboard', href: '/tutor/dashboard' },
-        { icon: LineChart, label: 'Analytics', href: '/tutor/analytics' },
+        //{ icon: LineChart, label: 'Analytics', href: '/tutor/analytics' },
+        //  { icon: Video, label: 'My Videos', href: '/private/videos' },
+        // { icon: Upload, label: 'Upload Video', href: '/private/videos/new' },
         { icon: BookOpen, label: 'My Courses', href: '/tutor/courses' },
         { icon: PlusCircle, label: 'Create Course', href: '/tutor/courses/new' },
+        { icon: Video, label: 'My Videos', href: '/tutor/videos' },
+        { icon: Upload, label: 'Upload Video', href: '/tutor/videos/new' },
       ]
     },
     {
       title: 'Performance',
       items: [
-        { icon: DollarSign, label: 'Earnings', href: '/tutor/earnings' },
+        // { icon: DollarSign, label: 'Earnings', href: '/tutor/earnings' },
         { icon: Sparkles, label: 'Reviews', href: '/tutor/reviews' },
       ]
     },
