@@ -1,194 +1,234 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎓 Learn — Context-Aware Roadmap & Learning Recommendation System
 
-## Getting Started
+> An AI-powered learning platform featuring interactive roadmap creation, semantic content search, and personalized course recommendations.
 
-First, run the development server:
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+[![Pinecone](https://img.shields.io/badge/Pinecone-Vector%20DB-blue?style=flat-square)](https://www.pinecone.io/)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel-black?style=flat-square&logo=vercel)](https://learn-v1-w9oe.vercel.app/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+
+**🌐 Live Demo:** [https://learn-v1-w9oe.vercel.app/](https://learn-v1-w9oe.vercel.app/)
+
+---
+
+## 📖 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [System Architecture](#-system-architecture)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [Project Structure](#-project-structure)
+- [API Overview](#-api-overview)
+- [Contributors](#-contributors)
+
+---
+
+## 🔍 Overview
+
+**Learn** addresses the growing need for personalized, intelligent learning experiences. Traditional learning platforms offer static, one-size-fits-all content — Learn solves this by combining interactive visual roadmaps with AI-powered semantic recommendations.
+
+Users can create drag-and-drop learning roadmaps, discover contextually relevant courses and videos through vector search, and get real-time assistance from an integrated AI tutor — all in one unified platform.
+
+---
+
+## ✨ Features
+
+### For Students
+- 🗺️ **Interactive Roadmap Builder** — Create and follow drag-and-drop learning paths using React Flow
+- 🤖 **AI-Generated Roadmaps** — Auto-generate structured learning paths based on your topic of interest
+- 🔍 **Semantic Search** — Find relevant courses and videos through meaning-based search, not just keywords
+- 💬 **AI Tutoring Assistant** — Get real-time help from an LLM-based tutor (Groq + qwen3-32b)
+- 📊 **Progress Tracking** — Track learning streaks, completion rates, and skill mastery
+- 🎯 **Personalized Recommendations** — Get course and video suggestions based on your current roadmap context
+
+### For Tutors
+- 📹 **Course Creation** — Multi-step course builder with video upload and curriculum design
+- 📈 **Performance Analytics** — Monitor student enrollment, ratings, and engagement
+- 🏷️ **Content Management** — Manage course listings, pricing, and publishing status
+
+### Platform
+- 🔐 **Role-Based Authentication** — Secure login via GitHub/Google OAuth or credentials (NextAuth.js)
+- ☁️ **Cloud Video Streaming** — Optimized video delivery via Cloudinary CDN
+- 📱 **Responsive Design** — Fully functional across desktop and mobile devices
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| **UI Components** | shadcn/ui, Radix UI, Lucide React |
+| **Roadmap Visualization** | React Flow |
+| **Backend** | Next.js API Routes, Mongoose ODM |
+| **Database** | MongoDB Atlas |
+| **Authentication** | NextAuth.js v5 (GitHub, Google OAuth, Credentials) |
+| **AI Embeddings** | Cohere embed-v4.0 (1536-dimensional vectors) |
+| **Vector Database** | Pinecone |
+| **AI Tutor** | Groq SDK (qwen3-32b) |
+| **Media Storage** | Cloudinary |
+| **Deployment** | Vercel |
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│              Frontend Layer                  │
+│         Next.js Pages + React Components     │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│               API Layer                      │
+│          Next.js API Routes (REST)           │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│             Service Layer                    │
+│       Business Logic + External Services     │
+└────┬──────────────┬──────────────┬──────────┘
+     │              │              │
+┌────▼────┐  ┌──────▼──────┐  ┌───▼────────┐
+│ MongoDB │  │   Pinecone  │  │  Cloudinary│
+│  Atlas  │  │  Vector DB  │  │    CDN     │
+└─────────┘  └─────────────┘  └────────────┘
+                   │
+        ┌──────────▼──────────┐
+        │   AI/ML Services    │
+        │  Cohere + Groq API  │
+        └─────────────────────┘
+```
+
+### Embedding Pipeline
+1. User creates/updates a course, video, or roadmap
+2. Content text is extracted and preprocessed
+3. Cohere `embed-v4.0` generates a 1536-dimensional vector asynchronously
+4. Vector is stored in Pinecone under the relevant namespace (`course-embeddings`, `video-embeddings`, `roadmap-embeddings`)
+5. Embedding status is updated in MongoDB
+
+### Recommendation Flow
+1. User context (current roadmap node) is embedded via Cohere
+2. Pinecone similarity search runs against stored content vectors
+3. Results are filtered by cosine similarity threshold (≥ 45%)
+4. Top matches are returned as personalized course/video suggestions
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- MongoDB Atlas account
+- Pinecone account
+- Cohere API key
+- Groq API key
+- Cloudinary account
+- GitHub/Google OAuth app credentials
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/NotSOgenius69/Learn.git
+cd Learn
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Fill in your keys (see Environment Variables section)
+
+# Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔑 Environment Variables
 
-## Learn More
+Create a `.env.local` file in the root directory with the following:
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-
-
-
-
-Cleanup the project after installation:
-
-
-- delete public
-- delete app/favicon.ico
-- head to global.css and delete the content and just keep the first three lines
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-- remove everything from app/page.tsx and just keep the following:
-```tsx
-import React from 'react'
-
-export const Home = () => {
-  return (
-    <div>Home</div>
-  )
-}
-export default Home; 
-```
-
-
-then head to .env file and paste 
 ```env
-'mongodb://127.0.0.1:27017/learn-v1Auth'
+# Database
+MONGODB_URI=your_mongodb_atlas_connection_string
+
+# Authentication
+NEXTAUTH_SECRET=your_nextauth_secret
+NEXTAUTH_URL=http://localhost:3000
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# AI Services
+COHERE_API_KEY=your_cohere_api_key
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_INDEX_NAME=your_pinecone_index_name
+GROQ_API_KEY=your_groq_api_key
+
+# Media
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
-then run the following command to install the required packages:
-```bash 
-npm i mongoose
+---
+
+## 📁 Project Structure
+
 ```
-head to libs/db.ts and paste the following to connect to the database:
-```ts
-import mongoose from 'mongoose';
-
-const connectDB = async () =>{
-    try{
-        const conn = await mongoose.connect(process.env.MONGO_URI!); 
-        console.log(`MongoDB Connected🚀: ${conn.connection.host}`);
-    }
-    catch(error: any){
-        console.error(`Error: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-export default connectDB;
-```
-
-
-
-
-
-shadcn  and ui components:
-```bash
-installation
-npx --legacy-peer-deps shadcn@latest init
-
-
-npx --legacy-peer-deps shadcn@latest add button card input table dropdown-menu label textarea 
-
-
-# icons
-npm i @tabler/icons-react
-
-
-
-
-installing authjs 
-```bash
-npm install next-auth@beta
-```
-then follow the instructions in the documentation to set up the auth system
-[authjs doc](https://authjs.dev/getting-started/installation)
-
-
-<!-- Registering the user- -->
-make a server action to register the user
-create actions/user.ts in the root directory.
-This will get the user data from the registration form in localhost:3000/register and send it to the server side here.
-- You should specify the form action to send data here in the user.ts file.
-- You should also specify the method to be used in the form action.
-```ts
-"use server";
-
-import connectDB from "@/lib/db";
-import { User } from "@/models/User";
-import { redirect } from "next/navigation";
-import { hash } from "bcryptjs";
-import { CredentialsSignin } from "next-auth";
-import { signIn } from "@/auth";
-
-const login = async (formData: FormData) => {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-
-  try {
-    await signIn("credentials", {
-      redirect: false,
-      callbackUrl: "/",
-      email,
-      password,
-    });
-  } catch (error) {
-    const someError = error as CredentialsSignin;
-    return someError.cause;
-  }
-  redirect("/");
-};
-
-const register = async (formData: FormData) => {
-  const firstName = formData.get("firstname") as string;
-  const lastName = formData.get("lastname") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-
-  console.log(firstName, lastName, email, password);
-
-  if (!firstName || !lastName || !email || !password) {
-    throw new Error("Please fill all fields");
-  }
-
-  await connectDB();
-
-  // existing user
-  const existingUser = await User.findOne({ email });
-  if (existingUser) throw new Error("User already exists");
-
-  const hashedPassword = await hash(password, 12);
-
-  await User.create({ firstName, lastName, email, password: hashedPassword });
-//   console.log(User);
-  redirect("/login");
-};
-
-const fetchAllUsers = async () => {
-  await connectDB();
-  const users = await User.find({});
-  return users;
-};
-
-export { register, login, fetchAllUsers };
+Learn/
+├── app/                    # Next.js App Router
+│   ├── (auth)/             # Authentication pages
+│   ├── (dashboard)/        # Student dashboard
+│   ├── (tutor)/            # Tutor dashboard
+│   ├── api/                # API route handlers
+│   └── layout.tsx          # Root layout
+├── components/             # Reusable React components
+├── lib/                    # Helper functions & third-party services
+├── models/                 # Mongoose schemas
+│   ├── User.ts
+│   ├── Course.ts
+│   ├── Video.ts
+│   ├── Roadmap.ts
+│   └── UserProgress.ts
+├── hooks/                  # Custom React hooks
+├── public/                 # Static assets
+└── .env.local              # Environment variables
 ```
 
-<!-- authorizing the user  -->
+---
 
+## 📡 API Overview
 
-head to the documentation of authjs and follow the instructions to authorize the user.
-[CREDENTIALS](https://authjs.dev/getting-started/authentication/credentials)
+| Category | Endpoints |
+|---|---|
+| **Auth** | `GET/POST /auth/[...nextauth]` |
+| **Courses** | `GET/POST/PUT/DELETE /courses` |
+| **Videos** | `GET/POST/PUT/DELETE /videos` |
+| **Roadmaps** | `POST /roadmap/generate`, `GET/POST /roadmap/saved` |
+| **AI Suggestions** | `POST /roadmap/suggestions/courses`, `/videos` |
+| **Search** | `GET /explore/popular-courses`, `/popular-videos` |
+| **Embeddings** | `GET /roadmap/health`, `/videos/embedding-health` |
+| **Upload** | `POST /upload` |
 
+For full API documentation see [API Docs](docs/API.md).
 
+---
+
+## 👥 Contributors
+
+| Name | Role |
+|---|---|
+| [Md. Tanjimul Hasan](https://github.com/NotSOgenius69) | Frontend, UI/UX, Authentication |
+| [Md. Mofazzal Hosen](https://github.com/) | Backend, AI/ML Integration, Deployment |
+
+---
